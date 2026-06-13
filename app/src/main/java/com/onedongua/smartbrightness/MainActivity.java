@@ -1,7 +1,11 @@
 package com.onedongua.smartbrightness;
 
-import android.content.pm.PackageManager;
+import android.app.ActivityManager;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -14,6 +18,7 @@ import android.widget.Toast;
 import androidx.activity.EdgeToEdge;
 import androidx.annotation.StringRes;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
@@ -33,7 +38,9 @@ public class MainActivity extends AppCompatActivity {
     private AppSettings appSettings;
     private AppLog appLog;
     private boolean updatingThresholdUi;
+    private boolean updatingServiceSwitch;
     private boolean isLogPanelVisible;
+    private boolean serviceStatusReceiverRegistered;
     private final Handler autoRefreshHandler = new Handler(Looper.getMainLooper());
     private final Runnable autoRefreshRunnable = new Runnable() {
         @Override
@@ -41,6 +48,16 @@ public class MainActivity extends AppCompatActivity {
             if (isLogPanelVisible) {
                 refreshLog();
                 autoRefreshHandler.postDelayed(this, LOG_AUTO_REFRESH_INTERVAL_MS);
+            }
+        }
+    };
+    private final BroadcastReceiver serviceStatusReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (BrightnessService.ACTION_STATUS_CHANGED.equals(intent.getAction())) {
+                boolean running = intent.getBooleanExtra(BrightnessService.EXTRA_RUNNING, false);
+                appSettings.setServiceRunning(running);
+                refreshServiceStatus();
             }
         }
     };
@@ -61,7 +78,7 @@ public class MainActivity extends AppCompatActivity {
         initLogUi();
 
         Shizuku.addRequestPermissionResultListener(REQUEST_PERMISSION_RESULT_LISTENER);
-        startServiceForCurrentMode();
+        startServiceIfEnabled();
     }
 
     private void adaptInsets() {
@@ -74,16 +91,30 @@ public class MainActivity extends AppCompatActivity {
 
     private void onRequestPermissionsResult(int requestCode, int grantResult) {
         boolean granted = grantResult == PackageManager.PERMISSION_GRANTED;
-        if (requestCode == REQUEST_CODE_PERMISSION_SHIZUKU && granted) {
+        if (requestCode != REQUEST_CODE_PERMISSION_SHIZUKU) {
+            return;
+        }
+        if (granted) {
             toast(R.string.permission_granted_shizuku);
             startBrightnessService();
+        } else {
+            appSettings.setServiceEnabled(false);
+            refreshServiceControlUi();
         }
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        registerServiceStatusReceiver();
+        refreshServiceControlUi();
     }
 
     @Override
     protected void onResume() {
         super.onResume();
         refreshLog();
+        refreshServiceControlUi();
         if (isLogPanelVisible) {
             startAutoRefreshLog();
         }
@@ -96,6 +127,12 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
+    protected void onStop() {
+        super.onStop();
+        unregisterServiceStatusReceiver();
+    }
+
+    @Override
     protected void onDestroy() {
         super.onDestroy();
         stopAutoRefreshLog();
@@ -105,6 +142,9 @@ public class MainActivity extends AppCompatActivity {
     private void checkAndStartShizuku() {
         if (Shizuku.isPreV11()) {
             // Pre-v11 is unsupported
+            appSettings.setServiceEnabled(false);
+            refreshServiceControlUi();
+            return;
         }
 
         if (Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED) {
@@ -113,6 +153,8 @@ public class MainActivity extends AppCompatActivity {
             startBrightnessService();
         } else if (Shizuku.shouldShowRequestPermissionRationale()) {
             // Users choose "Deny and don't ask again"
+            appSettings.setServiceEnabled(false);
+            refreshServiceControlUi();
         } else {
             // Request the permission
             Shizuku.requestPermission(REQUEST_CODE_PERMISSION_SHIZUKU);
@@ -137,16 +179,24 @@ public class MainActivity extends AppCompatActivity {
             toast(R.string.permission_granted_root);
             startBrightnessService();
         } else {
-            toast("no root");
+            toast(R.string.permission_denied_root);
+            appSettings.setServiceEnabled(false);
+            refreshServiceControlUi();
         }
     }
 
     private void startBrightnessService() {
+        appSettings.setServiceEnabled(true);
+        refreshServiceStatus();
         Intent intent = new Intent(this, BrightnessService.class);
         startForegroundService(intent);
     }
 
     private void startServiceForCurrentMode() {
+        if (!appSettings.isServiceEnabled()) {
+            stopBrightnessService();
+            return;
+        }
         ShellExecutor.Mode currentMode = appSettings.getShellMode();
         if (currentMode == ShellExecutor.Mode.ROOT) {
             startRoot();
@@ -155,7 +205,35 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private void startServiceIfEnabled() {
+        if (appSettings.isServiceEnabled()) {
+            startServiceForCurrentMode();
+        } else {
+            stopBrightnessService();
+        }
+    }
+
+    private void stopBrightnessService() {
+        stopService(new Intent(this, BrightnessService.class));
+        appSettings.setServiceRunning(false);
+        refreshServiceStatus();
+    }
+
     private void initSettingsUi() {
+        refreshServiceControlUi();
+        binding.serviceSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (updatingServiceSwitch) {
+                return;
+            }
+            appSettings.setServiceEnabled(isChecked);
+            if (isChecked) {
+                refreshServiceStatus();
+                startServiceForCurrentMode();
+            } else {
+                stopBrightnessService();
+            }
+        });
+
         binding.pageGroup.setOnCheckedChangeListener((group, checkedId) -> {
             boolean showSettings = checkedId == R.id.settingsPageButton;
             binding.settingsPanel.setVisibility(showSettings ? View.VISIBLE : View.GONE);
@@ -223,7 +301,7 @@ public class MainActivity extends AppCompatActivity {
                     ? ShellExecutor.Mode.ROOT
                     : ShellExecutor.Mode.SHIZUKU;
             appSettings.setShellMode(mode);
-            startServiceForCurrentMode();
+            startServiceIfEnabled();
         });
     }
 
@@ -268,6 +346,64 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private void refreshServiceControlUi() {
+        if (binding == null || appSettings == null) {
+            return;
+        }
+        updatingServiceSwitch = true;
+        binding.serviceSwitch.setChecked(appSettings.isServiceEnabled());
+        updatingServiceSwitch = false;
+        refreshServiceStatus();
+    }
+
+    private void refreshServiceStatus() {
+        if (binding == null || appSettings == null) {
+            return;
+        }
+        boolean running = isBrightnessServiceRunning();
+        appSettings.setServiceRunning(running);
+        int statusResId;
+        if (!appSettings.isServiceEnabled()) {
+            statusResId = R.string.service_status_disabled;
+        } else if (running) {
+            statusResId = R.string.service_status_running;
+        } else {
+            statusResId = R.string.service_status_stopped;
+        }
+        binding.serviceStatusText.setText(getString(R.string.service_status_label, getString(statusResId), appSettings.getShellMode().name()));
+    }
+
+    @SuppressWarnings("deprecation")
+    private boolean isBrightnessServiceRunning() {
+        ActivityManager manager = (ActivityManager) getSystemService(ACTIVITY_SERVICE);
+        if (manager == null) {
+            return appSettings.isServiceRunning();
+        }
+        for (ActivityManager.RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) {
+            if (BrightnessService.class.getName().equals(service.service.getClassName())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void registerServiceStatusReceiver() {
+        if (serviceStatusReceiverRegistered) {
+            return;
+        }
+        IntentFilter filter = new IntentFilter(BrightnessService.ACTION_STATUS_CHANGED);
+        ContextCompat.registerReceiver(
+                this, serviceStatusReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED);
+        serviceStatusReceiverRegistered = true;
+    }
+
+    private void unregisterServiceStatusReceiver() {
+        if (!serviceStatusReceiverRegistered) {
+            return;
+        }
+        unregisterReceiver(serviceStatusReceiver);
+        serviceStatusReceiverRegistered = false;
+    }
 
     public void toast(String msg) {
         Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();

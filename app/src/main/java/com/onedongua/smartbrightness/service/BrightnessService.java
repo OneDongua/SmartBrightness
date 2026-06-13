@@ -29,6 +29,8 @@ public class BrightnessService extends Service {
     private static final String CHANNEL_ID = "brightness_monitor";
     private static final int NOTIFICATION_ID = 1001;
     private static final long CHECK_INTERVAL_MS = 5_000L;
+    public static final String ACTION_STATUS_CHANGED = "com.onedongua.smartbrightness.action.STATUS_CHANGED";
+    public static final String EXTRA_RUNNING = "running";
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final Runnable periodicCheck = new Runnable() {
@@ -54,11 +56,13 @@ public class BrightnessService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
+        appSettings = new AppSettings(this);
+        appSettings.setServiceRunning(true);
+        sendStatusChanged(true);
         createNotificationChannel();
         startForeground(NOTIFICATION_ID, buildNotification());
 
         ShellExecutor shellExecutor = new ShellExecutor(this);
-        appSettings = new AppSettings(this);
         appLog = new AppLog(this);
         lightSensorManager = new LightSensorManager(this);
         brightnessController = new BrightnessController(this, shellExecutor);
@@ -70,6 +74,10 @@ public class BrightnessService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        if (!appSettings.isServiceEnabled()) {
+            stopSelf();
+            return START_NOT_STICKY;
+        }
         if (isScreenOn()) {
             detectOnce();
             startPeriodicCheck();
@@ -93,7 +101,18 @@ public class BrightnessService extends Service {
         if (lightSensorManager != null) {
             lightSensorManager.release();
         }
+        if (appSettings != null) {
+            appSettings.setServiceRunning(false);
+        }
+        sendStatusChanged(false);
         super.onDestroy();
+    }
+
+    private void sendStatusChanged(boolean running) {
+        Intent intent = new Intent(ACTION_STATUS_CHANGED);
+        intent.setPackage(getPackageName());
+        intent.putExtra(EXTRA_RUNNING, running);
+        sendBroadcast(intent);
     }
 
     private void registerScreenReceiver() {

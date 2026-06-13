@@ -7,6 +7,8 @@ import com.onedongua.smartbrightness.shizuku.ShellExecutor;
 
 public class AppSettings {
     private static final String PREFS_NAME = "app_settings";
+    private static final String KEY_SERVICE_ENABLED = "service_enabled";
+    private static final String KEY_SERVICE_RUNNING = "service_running";
     private static final String KEY_THRESHOLD_LUX = "threshold_lux";
     private static final String KEY_SHELL_MODE = "shell_mode";
     private static final float DEFAULT_THRESHOLD_LUX = 500f;
@@ -18,6 +20,26 @@ public class AppSettings {
     public AppSettings(Context context) {
         preferences = context.getApplicationContext()
                 .getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+    }
+
+    public boolean isServiceEnabled() {
+        return preferences.getBoolean(KEY_SERVICE_ENABLED, true);
+    }
+
+    public void setServiceEnabled(boolean enabled) {
+        preferences.edit()
+                .putBoolean(KEY_SERVICE_ENABLED, enabled)
+                .apply();
+    }
+
+    public boolean isServiceRunning() {
+        return preferences.getBoolean(KEY_SERVICE_RUNNING, false);
+    }
+
+    public void setServiceRunning(boolean running) {
+        preferences.edit()
+                .putBoolean(KEY_SERVICE_RUNNING, running)
+                .apply();
     }
 
     public float getThresholdLux() {
