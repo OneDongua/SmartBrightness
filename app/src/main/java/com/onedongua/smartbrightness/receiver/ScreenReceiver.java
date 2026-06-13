@@ -4,11 +4,11 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 
-public class ScreenOnReceiver extends BroadcastReceiver {
+public class ScreenReceiver extends BroadcastReceiver {
     private final Runnable onScreenOn;
     private final Runnable onScreenOff;
 
-    public ScreenOnReceiver(Runnable onScreenOn, Runnable onScreenOff) {
+    public ScreenReceiver(Runnable onScreenOn, Runnable onScreenOff) {
         this.onScreenOn = onScreenOn;
         this.onScreenOff = onScreenOff;
     }

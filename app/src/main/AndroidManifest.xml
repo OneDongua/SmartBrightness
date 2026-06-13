@@ -15,7 +15,7 @@
         android:theme="@style/Theme.SmartBrightness">
         <provider
             android:name="rikka.shizuku.ShizukuProvider"
-            android:authorities="com.onedongua.smartbrightness.shizuku"
+            android:authorities="${applicationId}.shell"
             android:enabled="true"
             android:exported="true"
             android:multiprocess="false"

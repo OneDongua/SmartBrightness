@@ -11,6 +11,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.SeekBar;
 import android.widget.Toast;
@@ -18,16 +19,22 @@ import android.widget.Toast;
 import androidx.activity.EdgeToEdge;
 import androidx.annotation.StringRes;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.TooltipCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
+import androidx.viewpager2.widget.ViewPager2;
 
+import com.google.android.material.tabs.TabLayoutMediator;
+import com.onedongua.smartbrightness.adapter.MainPagerAdapter;
 import com.onedongua.smartbrightness.databinding.ActivityMainBinding;
+import com.onedongua.smartbrightness.databinding.ViewLogsBinding;
+import com.onedongua.smartbrightness.databinding.ViewSettingsBinding;
+import com.onedongua.smartbrightness.executor.ShellExecutor;
 import com.onedongua.smartbrightness.log.AppLog;
 import com.onedongua.smartbrightness.service.BrightnessService;
 import com.onedongua.smartbrightness.settings.AppSettings;
-import com.onedongua.smartbrightness.shizuku.ShellExecutor;
 
 import rikka.shizuku.Shizuku;
 
@@ -74,6 +81,7 @@ public class MainActivity extends AppCompatActivity {
 
         setContentView(binding.getRoot());
         adaptInsets();
+        initPager();
         initSettingsUi();
         initLogUi();
 
@@ -144,6 +152,15 @@ public class MainActivity extends AppCompatActivity {
             // Pre-v11 is unsupported
             appSettings.setServiceEnabled(false);
             refreshServiceControlUi();
+            toast(R.string.shizuku_error);
+            return;
+        }
+
+        if (!Shizuku.pingBinder()) {
+            // Binder is dead
+            appSettings.setServiceEnabled(false);
+            refreshServiceControlUi();
+            toast(R.string.shizuku_error);
             return;
         }
 
@@ -155,6 +172,7 @@ public class MainActivity extends AppCompatActivity {
             // Users choose "Deny and don't ask again"
             appSettings.setServiceEnabled(false);
             refreshServiceControlUi();
+            toast(R.string.permission_denied_shizuku);
         } else {
             // Request the permission
             Shizuku.requestPermission(REQUEST_CODE_PERMISSION_SHIZUKU);
@@ -219,9 +237,67 @@ public class MainActivity extends AppCompatActivity {
         refreshServiceStatus();
     }
 
+    private ViewSettingsBinding settingsBinding;
+    private ViewLogsBinding logsBinding;
+
+    private void initPager() {
+        MainPagerAdapter adapter = new MainPagerAdapter(this);
+        binding.pager.setAdapter(adapter);
+        settingsBinding = (ViewSettingsBinding) adapter.getViewBindings().get(0);
+        logsBinding = (ViewLogsBinding) adapter.getViewBindings().get(1);
+
+        binding.pager.setOffscreenPageLimit(2);
+        binding.pager.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
+            @Override
+            public void onPageSelected(int position) {
+                super.onPageSelected(position);
+                isLogPanelVisible = position == 1;
+                if (isLogPanelVisible) {
+                    refreshLog();
+                    startAutoRefreshLog();
+                } else {
+                    stopAutoRefreshLog();
+                }
+
+                if (position == 0) {
+                    binding.bottomNav.setSelectedItemId(R.id.nav_settings);
+                } else if (position == 1) {
+                    binding.bottomNav.setSelectedItemId(R.id.nav_logs);
+                }
+            }
+        });
+
+        binding.bottomNav.setOnItemSelectedListener(item -> {
+
+            if (item.getItemId() == R.id.nav_settings) {
+                binding.pager.setCurrentItem(0);
+                return true;
+            }
+
+            if (item.getItemId() == R.id.nav_logs) {
+                binding.pager.setCurrentItem(1);
+                return true;
+            }
+
+            return false;
+        });
+
+        binding.bottomNav.post(() -> {
+            for (int i = 0; i < binding.bottomNav.getMenu().size(); i++) {
+                MenuItem item = binding.bottomNav.getMenu().getItem(i);
+
+                View view = binding.bottomNav.findViewById(item.getItemId());
+
+                TooltipCompat.setTooltipText(view, null);
+                view.setOnLongClickListener(v -> true);
+            }
+        });
+
+    }
+
     private void initSettingsUi() {
         refreshServiceControlUi();
-        binding.serviceSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+        settingsBinding.serviceSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
             if (updatingServiceSwitch) {
                 return;
             }
@@ -234,21 +310,8 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        binding.pageGroup.setOnCheckedChangeListener((group, checkedId) -> {
-            boolean showSettings = checkedId == R.id.settingsPageButton;
-            binding.settingsPanel.setVisibility(showSettings ? View.VISIBLE : View.GONE);
-            binding.logPanel.setVisibility(showSettings ? View.GONE : View.VISIBLE);
-            isLogPanelVisible = !showSettings;
-            if (isLogPanelVisible) {
-                refreshLog();
-                startAutoRefreshLog();
-            } else {
-                stopAutoRefreshLog();
-            }
-        });
-
         applyThresholdToUi(appSettings.getThresholdLux());
-        binding.thresholdSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+        settingsBinding.thresholdSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
                 if (fromUser) {
@@ -265,7 +328,7 @@ public class MainActivity extends AppCompatActivity {
             public void onStopTrackingTouch(SeekBar seekBar) {
             }
         });
-        binding.thresholdInput.addTextChangedListener(new TextWatcher() {
+        settingsBinding.thresholdInput.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
             }
@@ -282,7 +345,7 @@ public class MainActivity extends AppCompatActivity {
                 try {
                     float threshold = Float.parseFloat(value);
                     saveThreshold(threshold);
-                    binding.thresholdSeekBar.setProgress(Math.min(2000, Math.round(threshold)));
+                    settingsBinding.thresholdSeekBar.setProgress(Math.min(2000, Math.round(threshold)));
                 } catch (NumberFormatException ignored) {
                     toast(R.string.threshold_invalid);
                 }
@@ -293,10 +356,10 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        binding.shellModeGroup.check(appSettings.getShellMode() == ShellExecutor.Mode.ROOT
+        settingsBinding.shellModeGroup.check(appSettings.getShellMode() == ShellExecutor.Mode.ROOT
                 ? R.id.rootModeButton
                 : R.id.shizukuModeButton);
-        binding.shellModeGroup.setOnCheckedChangeListener((group, checkedId) -> {
+        settingsBinding.shellModeGroup.setOnCheckedChangeListener((group, checkedId) -> {
             ShellExecutor.Mode mode = checkedId == R.id.rootModeButton
                     ? ShellExecutor.Mode.ROOT
                     : ShellExecutor.Mode.SHIZUKU;
@@ -306,8 +369,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void initLogUi() {
-        binding.refreshLogButton.setOnClickListener(v -> refreshLog());
-        binding.clearLogButton.setOnClickListener(v -> {
+        logsBinding.refreshLogButton.setOnClickListener(v -> refreshLog());
+        logsBinding.clearLogButton.setOnClickListener(v -> {
             appLog.clear();
             refreshLog();
         });
@@ -315,8 +378,8 @@ public class MainActivity extends AppCompatActivity {
 
     private void applyThresholdToUi(float threshold) {
         updatingThresholdUi = true;
-        binding.thresholdSeekBar.setProgress(Math.min(2000, Math.round(threshold)));
-        binding.thresholdInput.setText(formatThreshold(threshold));
+        settingsBinding.thresholdSeekBar.setProgress(Math.min(2000, Math.round(threshold)));
+        settingsBinding.thresholdInput.setText(formatThreshold(threshold));
         updatingThresholdUi = false;
     }
 
@@ -342,7 +405,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void refreshLog() {
         if (binding != null && appLog != null) {
-            binding.logText.setText(appLog.getDisplayText());
+            logsBinding.logText.setText(appLog.getDisplayText());
         }
     }
 
@@ -351,7 +414,7 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
         updatingServiceSwitch = true;
-        binding.serviceSwitch.setChecked(appSettings.isServiceEnabled());
+        settingsBinding.serviceSwitch.setChecked(appSettings.isServiceEnabled());
         updatingServiceSwitch = false;
         refreshServiceStatus();
     }
@@ -370,10 +433,9 @@ public class MainActivity extends AppCompatActivity {
         } else {
             statusResId = R.string.service_status_stopped;
         }
-        binding.serviceStatusText.setText(getString(R.string.service_status_label, getString(statusResId), appSettings.getShellMode().name()));
+        settingsBinding.serviceStatusText.setText(getString(R.string.service_status_label, getString(statusResId), appSettings.getShellMode().name()));
     }
 
-    @SuppressWarnings("deprecation")
     private boolean isBrightnessServiceRunning() {
         ActivityManager manager = (ActivityManager) getSystemService(ACTIVITY_SERVICE);
         if (manager == null) {

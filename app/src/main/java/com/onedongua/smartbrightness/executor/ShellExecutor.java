@@ -1,4 +1,4 @@
-package com.onedongua.smartbrightness.shizuku;
+package com.onedongua.smartbrightness.executor;
 
 import android.content.Context;
 import android.content.pm.PackageManager;
@@ -22,7 +22,7 @@ public class ShellExecutor {
     }
 
     public Result execute(String command) {
-        Mode mode = appSettings.getShellMode();;
+        Mode mode = appSettings.getShellMode();
         if (mode == Mode.ROOT) {
             return executeWithRoot(command);
         }
@@ -49,6 +49,7 @@ public class ShellExecutor {
                     null,
                     null
             );
+            if (process == null) throw new IOException("Failed to create process");
             return collectResult(process);
         } catch (Exception e) {
             return Result.failure(e.getMessage());

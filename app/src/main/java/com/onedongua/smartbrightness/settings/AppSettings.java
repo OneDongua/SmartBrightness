@@ -3,7 +3,7 @@ package com.onedongua.smartbrightness.settings;
 import android.content.Context;
 import android.content.SharedPreferences;
 
-import com.onedongua.smartbrightness.shizuku.ShellExecutor;
+import com.onedongua.smartbrightness.executor.ShellExecutor;
 
 public class AppSettings {
     private static final String PREFS_NAME = "app_settings";

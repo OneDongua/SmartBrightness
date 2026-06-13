@@ -2,7 +2,8 @@
     <string name="app_name">SmartBrightness</string>
     <string name="permission_granted_shizuku">Shizuku permission granted</string>
     <string name="permission_granted_root">Root permission granted</string>
-    <string name="permission_denied_root">Root permission unavailable</string>
+    <string name="permission_denied_shizuku">Shizuku permission denied</string>
+    <string name="permission_denied_root">Root permission denied</string>
     <string name="notification_channel_name">Brightness monitor</string>
     <string name="notification_title">Auto Brightness Assistant Running</string>
     <string name="notification_text">Monitoring ambient light</string>
@@ -23,4 +24,7 @@
     <string name="refresh_logs">Refresh logs</string>
     <string name="clear_logs">Clear logs</string>
     <string name="no_logs">No logs</string>
+    <string name="shizuku_error">Shizuku error</string>
+    <string name="home">Home</string>
+    <string name="logs">Logs</string>
 </resources>

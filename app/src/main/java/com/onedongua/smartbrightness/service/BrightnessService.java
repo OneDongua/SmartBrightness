@@ -19,10 +19,10 @@ import androidx.core.app.NotificationCompat;
 import com.onedongua.smartbrightness.R;
 import com.onedongua.smartbrightness.brightness.BrightnessController;
 import com.onedongua.smartbrightness.log.AppLog;
-import com.onedongua.smartbrightness.receiver.ScreenOnReceiver;
+import com.onedongua.smartbrightness.receiver.ScreenReceiver;
 import com.onedongua.smartbrightness.sensor.LightSensorManager;
 import com.onedongua.smartbrightness.settings.AppSettings;
-import com.onedongua.smartbrightness.shizuku.ShellExecutor;
+import com.onedongua.smartbrightness.executor.ShellExecutor;
 
 public class BrightnessService extends Service {
     private static final String TAG = "BrightnessService";
@@ -49,7 +49,7 @@ public class BrightnessService extends Service {
     private BrightnessController brightnessController;
     private AppSettings appSettings;
     private AppLog appLog;
-    private ScreenOnReceiver screenOnReceiver;
+    private ScreenReceiver screenReceiver;
     private boolean receiverRegistered;
     private boolean periodicCheckRunning;
 
@@ -95,7 +95,7 @@ public class BrightnessService extends Service {
     public void onDestroy() {
         handler.removeCallbacksAndMessages(null);
         if (receiverRegistered) {
-            unregisterReceiver(screenOnReceiver);
+            unregisterReceiver(screenReceiver);
             receiverRegistered = false;
         }
         if (lightSensorManager != null) {
@@ -116,14 +116,14 @@ public class BrightnessService extends Service {
     }
 
     private void registerScreenReceiver() {
-        screenOnReceiver = new ScreenOnReceiver(this::onScreenOn, this::onScreenOff);
+        screenReceiver = new ScreenReceiver(this::onScreenOn, this::onScreenOff);
         IntentFilter filter = new IntentFilter();
         filter.addAction(Intent.ACTION_SCREEN_ON);
         filter.addAction(Intent.ACTION_SCREEN_OFF);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(screenOnReceiver, filter, RECEIVER_NOT_EXPORTED);
+            registerReceiver(screenReceiver, filter, RECEIVER_NOT_EXPORTED);
         } else {
-            registerReceiver(screenOnReceiver, filter);
+            registerReceiver(screenReceiver, filter);
         }
         receiverRegistered = true;
     }

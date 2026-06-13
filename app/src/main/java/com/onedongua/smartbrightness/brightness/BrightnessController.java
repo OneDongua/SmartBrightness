@@ -4,7 +4,7 @@ import android.content.Context;
 import android.provider.Settings;
 import android.util.Log;
 
-import com.onedongua.smartbrightness.shizuku.ShellExecutor;
+import com.onedongua.smartbrightness.executor.ShellExecutor;
 
 public class BrightnessController {
     private static final String TAG = "BrightnessController";
