@@ -1,8 +1,9 @@
 package com.onedongua.smartbrightness.shizuku;
 
 import android.content.Context;
-import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+
+import com.onedongua.smartbrightness.settings.AppSettings;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -14,16 +15,10 @@ import java.nio.charset.StandardCharsets;
 import rikka.shizuku.Shizuku;
 
 public class ShellExecutor {
-    private static final String PREFS_NAME = "shell_executor";
-    private static final String KEY_MODE = "shell_mode";
-    private static final String MODE_SHIZUKU = "SHIZUKU";
-    private static final String MODE_ROOT = "ROOT";
-
-    private final SharedPreferences preferences;
+    private final AppSettings appSettings;
 
     public ShellExecutor(Context context) {
-        preferences = context.getApplicationContext()
-                .getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        appSettings = new AppSettings(context);
     }
 
     public Result execute(String command) {
@@ -35,17 +30,11 @@ public class ShellExecutor {
     }
 
     public Mode getMode() {
-        String value = preferences.getString(KEY_MODE, MODE_SHIZUKU);
-        if (MODE_ROOT.equals(value)) {
-            return Mode.ROOT;
-        }
-        return Mode.SHIZUKU;
+        return appSettings.getShellMode();
     }
 
     public void setMode(Mode mode) {
-        preferences.edit()
-                .putString(KEY_MODE, mode == Mode.ROOT ? MODE_ROOT : MODE_SHIZUKU)
-                .apply();
+        appSettings.setShellMode(mode);
     }
 
     private Result executeWithShizuku(String command) {

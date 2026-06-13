@@ -4,4 +4,15 @@
     <string name="notification_channel_name">Brightness monitor</string>
     <string name="notification_title">Auto Brightness Assistant Running</string>
     <string name="notification_text">Monitoring ambient light</string>
+    <string name="page_settings">Settings</string>
+    <string name="page_logs">Logs</string>
+    <string name="threshold_label">Ambient light threshold: %1$s lux</string>
+    <string name="threshold_input_hint">Enter threshold lux</string>
+    <string name="threshold_invalid">Invalid threshold</string>
+    <string name="execution_mode">Execution mode</string>
+    <string name="mode_shizuku">Shizuku</string>
+    <string name="mode_root">Root</string>
+    <string name="refresh_logs">Refresh logs</string>
+    <string name="clear_logs">Clear logs</string>
+    <string name="no_logs">No logs</string>
 </resources>
