@@ -1,4 +1,7 @@
 <resources>
     <string name="app_name">SmartBrightness</string>
     <string name="permission_granted">Permission granted</string>
+    <string name="notification_channel_name">Brightness monitor</string>
+    <string name="notification_title">Auto Brightness Assistant Running</string>
+    <string name="notification_text">Monitoring ambient light</string>
 </resources>

@@ -1,0 +1,188 @@
+package com.onedongua.smartbrightness.service;
+
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.Service;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.os.Build;
+import android.os.Handler;
+import android.os.IBinder;
+import android.os.Looper;
+import android.os.PowerManager;
+import android.util.Log;
+
+import androidx.annotation.Nullable;
+import androidx.core.app.NotificationCompat;
+
+import com.onedongua.smartbrightness.R;
+import com.onedongua.smartbrightness.brightness.BrightnessController;
+import com.onedongua.smartbrightness.receiver.ScreenOnReceiver;
+import com.onedongua.smartbrightness.sensor.LightSensorManager;
+import com.onedongua.smartbrightness.shizuku.ShellExecutor;
+
+public class BrightnessService extends Service {
+    private static final String TAG = "BrightnessService";
+    private static final String CHANNEL_ID = "brightness_monitor";
+    private static final int NOTIFICATION_ID = 1001;
+    private static final long CHECK_INTERVAL_MS = 5_000L;
+    private static final float DEFAULT_THRESHOLD_LUX = 500f;
+
+    private final Handler handler = new Handler(Looper.getMainLooper());
+    private final Runnable periodicCheck = new Runnable() {
+        @Override
+        public void run() {
+            if (!periodicCheckRunning || !isScreenOn()) {
+                periodicCheckRunning = false;
+                return;
+            }
+            detectOnce();
+            handler.postDelayed(this, CHECK_INTERVAL_MS);
+        }
+    };
+
+    private LightSensorManager lightSensorManager;
+    private BrightnessController brightnessController;
+    private ScreenOnReceiver screenOnReceiver;
+    private boolean receiverRegistered;
+    private boolean periodicCheckRunning;
+
+    @Override
+    public void onCreate() {
+        super.onCreate();
+        createNotificationChannel();
+        startForeground(NOTIFICATION_ID, buildNotification());
+
+        ShellExecutor shellExecutor = new ShellExecutor(this);
+        lightSensorManager = new LightSensorManager(this);
+        brightnessController = new BrightnessController(this, shellExecutor);
+        registerScreenReceiver();
+        if (isScreenOn()) {
+            startPeriodicCheck();
+        }
+    }
+
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        if (isScreenOn()) {
+            detectOnce();
+            startPeriodicCheck();
+        }
+        return START_STICKY;
+    }
+
+    @Nullable
+    @Override
+    public IBinder onBind(Intent intent) {
+        return null;
+    }
+
+    @Override
+    public void onDestroy() {
+        handler.removeCallbacksAndMessages(null);
+        if (receiverRegistered) {
+            unregisterReceiver(screenOnReceiver);
+            receiverRegistered = false;
+        }
+        if (lightSensorManager != null) {
+            lightSensorManager.release();
+        }
+        super.onDestroy();
+    }
+
+    private void registerScreenReceiver() {
+        screenOnReceiver = new ScreenOnReceiver(this::onScreenOn, this::onScreenOff);
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(Intent.ACTION_SCREEN_ON);
+        filter.addAction(Intent.ACTION_SCREEN_OFF);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(screenOnReceiver, filter, RECEIVER_NOT_EXPORTED);
+        } else {
+            registerReceiver(screenOnReceiver, filter);
+        }
+        receiverRegistered = true;
+    }
+
+    private void onScreenOn() {
+        startPeriodicCheck();
+        detectOnce();
+    }
+
+    private void onScreenOff() {
+        stopPeriodicCheck();
+        if (lightSensorManager != null) {
+            lightSensorManager.release();
+        }
+    }
+
+    private void startPeriodicCheck() {
+        if (periodicCheckRunning) {
+            return;
+        }
+        periodicCheckRunning = true;
+        handler.removeCallbacks(periodicCheck);
+        handler.postDelayed(periodicCheck, CHECK_INTERVAL_MS);
+    }
+
+    private void stopPeriodicCheck() {
+        periodicCheckRunning = false;
+        handler.removeCallbacks(periodicCheck);
+    }
+
+    private void detectOnce() {
+        if (lightSensorManager == null || !isScreenOn()) {
+            return;
+        }
+        lightSensorManager.detectOnce(new LightSensorManager.Callback() {
+            @Override
+            public void onLux(float lux) {
+                handleLux(lux);
+            }
+
+            @Override
+            public void onUnavailable(String reason) {
+                Log.w(TAG, "Light sensor unavailable: " + reason);
+            }
+        });
+    }
+
+    private boolean isScreenOn() {
+        PowerManager powerManager = (PowerManager) getSystemService(POWER_SERVICE);
+        return powerManager != null && powerManager.isInteractive();
+    }
+
+    private void handleLux(float lux) {
+        Log.d(TAG, "Lux = " + lux);
+        if (lux <= DEFAULT_THRESHOLD_LUX) {
+            return;
+        }
+        if (brightnessController.isAutoBrightnessEnabled()) {
+            return;
+        }
+        boolean enabled = brightnessController.enableAutoBrightness();
+        Log.i(TAG, enabled ? "Auto brightness enabled" : "Failed to enable auto brightness");
+    }
+
+    private Notification buildNotification() {
+        return new NotificationCompat.Builder(this, CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_stat_brightness)
+                .setContentTitle(getString(R.string.notification_title))
+                .setContentText(getString(R.string.notification_text))
+                .setOngoing(true)
+                .setPriority(NotificationCompat.PRIORITY_LOW)
+                .build();
+    }
+
+    private void createNotificationChannel() {
+        NotificationChannel channel = new NotificationChannel(
+                CHANNEL_ID,
+                getString(R.string.notification_channel_name),
+                NotificationManager.IMPORTANCE_LOW
+        );
+        NotificationManager manager = getSystemService(NotificationManager.class);
+        if (manager != null) {
+            manager.createNotificationChannel(channel);
+        }
+    }
+}

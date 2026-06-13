@@ -2,4 +2,7 @@
 <resources>
     <string name="app_name">智能自动亮度</string>
     <string name="permission_granted">已获得权限</string>
+    <string name="notification_channel_name">亮度监测</string>
+    <string name="notification_title">自动亮度助手运行中</string>
+    <string name="notification_text">正在监测环境光</string>
 </resources>

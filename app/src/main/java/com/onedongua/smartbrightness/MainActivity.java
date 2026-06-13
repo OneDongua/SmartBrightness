@@ -1,6 +1,8 @@
 package com.onedongua.smartbrightness;
 
 import android.content.pm.PackageManager;
+import android.content.Intent;
+import android.os.Build;
 import android.os.Bundle;
 import android.widget.Toast;
 
@@ -12,6 +14,7 @@ import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
 import com.onedongua.smartbrightness.databinding.ActivityMainBinding;
+import com.onedongua.smartbrightness.service.BrightnessService;
 
 import rikka.shizuku.Shizuku;
 
@@ -44,7 +47,10 @@ public class MainActivity extends AppCompatActivity {
 
     private void onRequestPermissionsResult(int requestCode, int grantResult) {
         boolean granted = grantResult == PackageManager.PERMISSION_GRANTED;
-        // Do stuff based on the result and the request code
+        if (requestCode == REQUEST_CODE_PERMISSION_SHIZUKU && granted) {
+            toast(R.string.permission_granted);
+            startBrightnessService();
+        }
     }
 
     @Override
@@ -62,6 +68,7 @@ public class MainActivity extends AppCompatActivity {
         if (Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED) {
             // Granted
             toast(R.string.permission_granted);
+            startBrightnessService();
             return true;
         } else if (Shizuku.shouldShowRequestPermissionRationale()) {
             // Users choose "Deny and don't ask again"
@@ -71,6 +78,11 @@ public class MainActivity extends AppCompatActivity {
             Shizuku.requestPermission(code);
             return false;
         }
+    }
+
+    private void startBrightnessService() {
+        Intent intent = new Intent(this, BrightnessService.class);
+        startForegroundService(intent);
     }
 
 
