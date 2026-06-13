@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">SmartBrightness</string>
+    <string name="permission_granted">Permission granted</string>
+</resources>

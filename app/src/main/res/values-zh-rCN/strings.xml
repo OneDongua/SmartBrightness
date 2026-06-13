@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">智能自动亮度</string>
+    <string name="permission_granted">已获得权限</string>
+</resources>
