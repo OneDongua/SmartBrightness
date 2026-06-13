@@ -1,12 +1,13 @@
 <resources>
     <string name="app_name">SmartBrightness</string>
-    <string name="permission_granted">Permission granted</string>
+    <string name="permission_granted_shizuku">Shizuku permission granted</string>
+    <string name="permission_granted_root">Root permission granted</string>
     <string name="notification_channel_name">Brightness monitor</string>
     <string name="notification_title">Auto Brightness Assistant Running</string>
     <string name="notification_text">Monitoring ambient light</string>
     <string name="page_settings">Settings</string>
     <string name="page_logs">Logs</string>
-    <string name="threshold_label">Ambient light threshold: %1$s lux</string>
+    <string name="threshold_label">Ambient light threshold:</string>
     <string name="threshold_input_hint">Enter threshold lux</string>
     <string name="threshold_invalid">Invalid threshold</string>
     <string name="execution_mode">Execution mode</string>

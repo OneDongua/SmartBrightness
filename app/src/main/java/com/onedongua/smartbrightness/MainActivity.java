@@ -75,7 +75,7 @@ public class MainActivity extends AppCompatActivity {
     private void onRequestPermissionsResult(int requestCode, int grantResult) {
         boolean granted = grantResult == PackageManager.PERMISSION_GRANTED;
         if (requestCode == REQUEST_CODE_PERMISSION_SHIZUKU && granted) {
-            toast(R.string.permission_granted);
+            toast(R.string.permission_granted_shizuku);
             startBrightnessService();
         }
     }
@@ -102,24 +102,42 @@ public class MainActivity extends AppCompatActivity {
         Shizuku.removeRequestPermissionResultListener(REQUEST_PERMISSION_RESULT_LISTENER);
     }
 
-    private boolean checkPermission(int code) {
+    private void checkAndStartShizuku() {
         if (Shizuku.isPreV11()) {
             // Pre-v11 is unsupported
-            return false;
         }
 
         if (Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED) {
             // Granted
-            toast(R.string.permission_granted);
+            toast(R.string.permission_granted_shizuku);
             startBrightnessService();
-            return true;
         } else if (Shizuku.shouldShowRequestPermissionRationale()) {
             // Users choose "Deny and don't ask again"
-            return false;
         } else {
             // Request the permission
-            Shizuku.requestPermission(code);
+            Shizuku.requestPermission(REQUEST_CODE_PERMISSION_SHIZUKU);
+        }
+    }
+
+    private boolean checkRootPermission() {
+        try {
+            Process process = Runtime.getRuntime().exec("su");
+            process.getOutputStream().write("exit\n".getBytes());
+            process.getOutputStream().flush();
+
+            int result = process.waitFor();
+            return result == 0;
+        } catch (Exception e) {
             return false;
+        }
+    }
+
+    private void startRoot() {
+        if (checkRootPermission()) {
+            toast(R.string.permission_granted_root);
+            startBrightnessService();
+        } else {
+            toast("no root");
         }
     }
 
@@ -129,11 +147,12 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void startServiceForCurrentMode() {
-        if (appSettings.getShellMode() == ShellExecutor.Mode.ROOT) {
-            startBrightnessService();
-            return;
+        ShellExecutor.Mode currentMode = appSettings.getShellMode();
+        if (currentMode == ShellExecutor.Mode.ROOT) {
+            startRoot();
+        } else if (currentMode == ShellExecutor.Mode.SHIZUKU) {
+            checkAndStartShizuku();
         }
-        checkPermission(REQUEST_CODE_PERMISSION_SHIZUKU);
     }
 
     private void initSettingsUi() {
@@ -186,7 +205,6 @@ public class MainActivity extends AppCompatActivity {
                     float threshold = Float.parseFloat(value);
                     saveThreshold(threshold);
                     binding.thresholdSeekBar.setProgress(Math.min(2000, Math.round(threshold)));
-                    updateThresholdLabel(threshold);
                 } catch (NumberFormatException ignored) {
                     toast(R.string.threshold_invalid);
                 }
@@ -221,16 +239,11 @@ public class MainActivity extends AppCompatActivity {
         updatingThresholdUi = true;
         binding.thresholdSeekBar.setProgress(Math.min(2000, Math.round(threshold)));
         binding.thresholdInput.setText(formatThreshold(threshold));
-        updateThresholdLabel(threshold);
         updatingThresholdUi = false;
     }
 
     private void saveThreshold(float threshold) {
         appSettings.setThresholdLux(threshold);
-    }
-
-    private void updateThresholdLabel(float threshold) {
-        binding.thresholdLabel.setText(getString(R.string.threshold_label, formatThreshold(threshold)));
     }
 
     private String formatThreshold(float threshold) {

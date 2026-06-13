@@ -1,13 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">智能自动亮度</string>
-    <string name="permission_granted">已获得权限</string>
+    <string name="permission_granted_shizuku">已获得Shizuku权限</string>
+    <string name="permission_granted_root">已获得Root权限</string>
     <string name="notification_channel_name">亮度监测</string>
     <string name="notification_title">自动亮度助手运行中</string>
     <string name="notification_text">正在监测环境光</string>
     <string name="page_settings">设置</string>
     <string name="page_logs">日志</string>
-    <string name="threshold_label">环境光阈值：%1$s lux</string>
+    <string name="threshold_label">环境光阈值:</string>
     <string name="threshold_input_hint">输入阈值 lux</string>
     <string name="threshold_invalid">阈值格式无效</string>
     <string name="execution_mode">执行模式</string>

@@ -22,19 +22,11 @@ public class ShellExecutor {
     }
 
     public Result execute(String command) {
-        Mode mode = getMode();
+        Mode mode = appSettings.getShellMode();;
         if (mode == Mode.ROOT) {
             return executeWithRoot(command);
         }
         return executeWithShizuku(command);
-    }
-
-    public Mode getMode() {
-        return appSettings.getShellMode();
-    }
-
-    public void setMode(Mode mode) {
-        appSettings.setShellMode(mode);
     }
 
     private Result executeWithShizuku(String command) {
