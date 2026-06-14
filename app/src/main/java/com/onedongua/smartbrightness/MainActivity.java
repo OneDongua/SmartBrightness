@@ -396,6 +396,9 @@ public class MainActivity extends AppCompatActivity {
 
         applyIntervalToUi(appSettings.getCheckInterval());
         settingsBinding.applyIntervalButton.setOnClickListener(v -> {
+            if (updatingIntervalUi) {
+                return;
+            }
             String value = settingsBinding.intervalInput.getText().toString().trim();
             if (value.isEmpty()) {
                 toast(R.string.interval_invalid);
