@@ -1,5 +1,6 @@
 package com.onedongua.smartbrightness;
 
+import android.annotation.SuppressLint;
 import android.app.ActivityManager;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -11,22 +12,24 @@ import android.os.Handler;
 import android.os.Looper;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.util.TypedValue;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.SeekBar;
+import android.widget.ArrayAdapter;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
 import androidx.annotation.StringRes;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.ListPopupWindow;
 import androidx.appcompat.widget.TooltipCompat;
 import androidx.core.content.ContextCompat;
+import androidx.core.content.res.ResourcesCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.viewpager2.widget.ViewPager2;
 
-import com.google.android.material.tabs.TabLayoutMediator;
 import com.onedongua.smartbrightness.adapter.MainPagerAdapter;
 import com.onedongua.smartbrightness.databinding.ActivityMainBinding;
 import com.onedongua.smartbrightness.databinding.ViewLogsBinding;
@@ -121,7 +124,6 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        refreshLog();
         refreshServiceControlUi();
         if (isLogPanelVisible) {
             startAutoRefreshLog();
@@ -175,6 +177,8 @@ public class MainActivity extends AppCompatActivity {
             toast(R.string.permission_denied_shizuku);
         } else {
             // Request the permission
+            appSettings.setServiceEnabled(false);
+            refreshServiceControlUi();
             Shizuku.requestPermission(REQUEST_CODE_PERMISSION_SHIZUKU);
         }
     }
@@ -295,6 +299,7 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+    @SuppressLint("ClickableViewAccessibility")
     private void initSettingsUi() {
         refreshServiceControlUi();
         settingsBinding.serviceSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
@@ -310,23 +315,45 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        String[] items = {
+                ShellExecutor.Mode.SHIZUKU.name(),
+                ShellExecutor.Mode.ROOT.name()
+        };
+
+        ArrayAdapter<String> adapter =
+                new ArrayAdapter<>(
+                        this,
+                        R.layout.dropdown_list_item,
+                        items);
+
+        ListPopupWindow popup = new ListPopupWindow(this);
+        popup.setAdapter(adapter);
+        popup.setAnchorView(settingsBinding.modeText);
+        popup.setHorizontalOffset(dp2px(8));
+        popup.setModal(true);
+        popup.setWidth(dp2px(80));
+
+        settingsBinding.modeBg.setOnClickListener(v -> popup.show());
+
+        settingsBinding.modeText.setText(appSettings.getShellMode().name());
+
+        popup.setOnItemClickListener((parent, view, position, id) -> {
+            ShellExecutor.Mode mode = position == 1
+                    ? ShellExecutor.Mode.ROOT
+                    : ShellExecutor.Mode.SHIZUKU;
+            appSettings.setShellMode(mode);
+            settingsBinding.modeText.setText(mode.name());
+            popup.dismiss();
+
+        });
+
         applyThresholdToUi(appSettings.getThresholdLux());
-        settingsBinding.thresholdSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                if (fromUser) {
-                    saveThreshold(progress);
-                    applyThresholdToUi(progress);
-                }
+        settingsBinding.thresholdSlider.addOnChangeListener((slider, value, fromUser) -> {
+            if (fromUser) {
+                saveThreshold(value);
+                applyThresholdToUi(value);
             }
 
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {
-            }
-
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {
-            }
         });
         settingsBinding.thresholdInput.addTextChangedListener(new TextWatcher() {
             @Override
@@ -345,7 +372,7 @@ public class MainActivity extends AppCompatActivity {
                 try {
                     float threshold = Float.parseFloat(value);
                     saveThreshold(threshold);
-                    settingsBinding.thresholdSeekBar.setProgress(Math.min(2000, Math.round(threshold)));
+                    settingsBinding.thresholdSlider.setValue(Math.min(2000, Math.round(threshold)));
                 } catch (NumberFormatException ignored) {
                     toast(R.string.threshold_invalid);
                 }
@@ -354,17 +381,6 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void afterTextChanged(Editable s) {
             }
-        });
-
-        settingsBinding.shellModeGroup.check(appSettings.getShellMode() == ShellExecutor.Mode.ROOT
-                ? R.id.rootModeButton
-                : R.id.shizukuModeButton);
-        settingsBinding.shellModeGroup.setOnCheckedChangeListener((group, checkedId) -> {
-            ShellExecutor.Mode mode = checkedId == R.id.rootModeButton
-                    ? ShellExecutor.Mode.ROOT
-                    : ShellExecutor.Mode.SHIZUKU;
-            appSettings.setShellMode(mode);
-            startServiceIfEnabled();
         });
     }
 
@@ -378,7 +394,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void applyThresholdToUi(float threshold) {
         updatingThresholdUi = true;
-        settingsBinding.thresholdSeekBar.setProgress(Math.min(2000, Math.round(threshold)));
+        settingsBinding.thresholdSlider.setValue(Math.min(2000, Math.round(threshold)));
         settingsBinding.thresholdInput.setText(formatThreshold(threshold));
         updatingThresholdUi = false;
     }
@@ -426,14 +442,21 @@ public class MainActivity extends AppCompatActivity {
         boolean running = isBrightnessServiceRunning();
         appSettings.setServiceRunning(running);
         int statusResId;
+        int modeResId;
         if (!appSettings.isServiceEnabled()) {
             statusResId = R.string.service_status_disabled;
+            modeResId = R.drawable.ic_error;
         } else if (running) {
             statusResId = R.string.service_status_running;
+            modeResId = R.drawable.ic_check_circle;
         } else {
             statusResId = R.string.service_status_stopped;
+            modeResId = R.drawable.ic_error;
         }
-        settingsBinding.serviceStatusText.setText(getString(R.string.service_status_label, getString(statusResId), appSettings.getShellMode().name()));
+        settingsBinding.serviceModeText.setVisibility(modeResId == R.drawable.ic_error ? View.GONE : View.VISIBLE);
+        settingsBinding.serviceStatusText.setText(getString(R.string.service_status_label, getString(statusResId)));
+        settingsBinding.serviceModeText.setText(getString(R.string.service_mode_label, appSettings.getShellMode().name()));
+        settingsBinding.serviceStatusIcon.setImageDrawable(ResourcesCompat.getDrawable(getResources(), modeResId, getTheme()));
     }
 
     private boolean isBrightnessServiceRunning() {
@@ -473,6 +496,14 @@ public class MainActivity extends AppCompatActivity {
 
     public void toast(@StringRes int resId) {
         Toast.makeText(this, resId, Toast.LENGTH_SHORT).show();
+    }
+
+    public int dp2px(float dp) {
+        return (int) TypedValue.applyDimension(
+                TypedValue.COMPLEX_UNIT_DIP,
+                dp,
+                getResources().getDisplayMetrics()
+        );
     }
 
 }

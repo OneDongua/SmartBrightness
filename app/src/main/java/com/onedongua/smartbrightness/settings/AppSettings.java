@@ -23,7 +23,7 @@ public class AppSettings {
     }
 
     public boolean isServiceEnabled() {
-        return preferences.getBoolean(KEY_SERVICE_ENABLED, true);
+        return preferences.getBoolean(KEY_SERVICE_ENABLED, false);
     }
 
     public void setServiceEnabled(boolean enabled) {

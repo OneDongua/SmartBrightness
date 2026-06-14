@@ -18,11 +18,11 @@ import androidx.core.app.NotificationCompat;
 
 import com.onedongua.smartbrightness.R;
 import com.onedongua.smartbrightness.brightness.BrightnessController;
+import com.onedongua.smartbrightness.executor.ShellExecutor;
 import com.onedongua.smartbrightness.log.AppLog;
 import com.onedongua.smartbrightness.receiver.ScreenReceiver;
 import com.onedongua.smartbrightness.sensor.LightSensorManager;
 import com.onedongua.smartbrightness.settings.AppSettings;
-import com.onedongua.smartbrightness.executor.ShellExecutor;
 
 public class BrightnessService extends Service {
     private static final String TAG = "BrightnessService";
@@ -190,7 +190,7 @@ public class BrightnessService extends Service {
             return;
         }
         boolean enabled = brightnessController.enableAutoBrightness();
-        appLog.add(luxText + "\n" + (enabled ? "已开启自动亮度" : "开启自动亮度失败"));
+        appLog.add((enabled ? "已开启自动亮度" : "开启自动亮度失败") + luxText + "\n");
         Log.i(TAG, enabled ? "Auto brightness enabled" : "Failed to enable auto brightness");
     }
 
