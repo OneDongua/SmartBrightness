@@ -48,6 +48,7 @@ public class MainActivity extends AppCompatActivity {
     private AppSettings appSettings;
     private AppLog appLog;
     private boolean updatingThresholdUi;
+    private boolean updatingIntervalUi;
     private boolean updatingServiceSwitch;
     private boolean isLogPanelVisible;
     private boolean serviceStatusReceiverRegistered;
@@ -58,6 +59,20 @@ public class MainActivity extends AppCompatActivity {
             if (isLogPanelVisible) {
                 refreshLog();
                 autoRefreshHandler.postDelayed(this, LOG_AUTO_REFRESH_INTERVAL_MS);
+            }
+        }
+    };
+    private final Runnable thresholdApplyRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if (settingsBinding == null) return;
+            String value = settingsBinding.thresholdInput.getText().toString().trim();
+            if (value.isEmpty()) return;
+            try {
+                float threshold = Float.parseFloat(value);
+                saveThreshold(threshold);
+            } catch (NumberFormatException ignored) {
+                toast(R.string.threshold_invalid);
             }
         }
     };
@@ -146,6 +161,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onDestroy() {
         super.onDestroy();
         stopAutoRefreshLog();
+        autoRefreshHandler.removeCallbacks(thresholdApplyRunnable);
         Shizuku.removeRequestPermissionResultListener(REQUEST_PERMISSION_RESULT_LISTENER);
     }
 
@@ -365,21 +381,44 @@ public class MainActivity extends AppCompatActivity {
                 if (updatingThresholdUi) {
                     return;
                 }
-                String value = s.toString().trim();
-                if (value.isEmpty()) {
-                    return;
-                }
-                try {
-                    float threshold = Float.parseFloat(value);
-                    saveThreshold(threshold);
-                    settingsBinding.thresholdSlider.setValue(Math.min(2000, Math.round(threshold)));
-                } catch (NumberFormatException ignored) {
-                    toast(R.string.threshold_invalid);
-                }
+                // 滑动条实时更新，延迟应用
+                String value = settingsBinding.thresholdInput.getText().toString().trim();
+                float threshold = value.isEmpty() ? 0 : Float.parseFloat(value);
+                settingsBinding.thresholdSlider.setValue(Math.min(2000, Math.round(threshold)));
+                autoRefreshHandler.removeCallbacks(thresholdApplyRunnable);
+                autoRefreshHandler.postDelayed(thresholdApplyRunnable, 3000);
             }
 
             @Override
             public void afterTextChanged(Editable s) {
+            }
+        });
+
+        applyIntervalToUi(appSettings.getCheckInterval());
+        settingsBinding.applyIntervalButton.setOnClickListener(v -> {
+            String value = settingsBinding.intervalInput.getText().toString().trim();
+            if (value.isEmpty()) {
+                toast(R.string.interval_invalid);
+                return;
+            }
+            try {
+                long interval = Long.parseLong(value);
+                saveInterval(interval);
+
+                // Notify service to update interval
+                if (isBrightnessServiceRunning()) {
+                    Intent intent = new Intent(this, BrightnessService.class);
+                    intent.setAction(BrightnessService.ACTION_UPDATE_INTERVAL);
+                    startForegroundService(intent);
+                }
+
+                if (interval > 0) {
+                    toast(getString(R.string.interval_check_toast, value));
+                } else {
+                    toast(R.string.interval_check_disabled_toast);
+                }
+            } catch (NumberFormatException ignored) {
+                toast(R.string.interval_invalid);
             }
         });
     }
@@ -408,6 +447,16 @@ public class MainActivity extends AppCompatActivity {
             return String.valueOf(Math.round(threshold));
         }
         return String.valueOf(threshold);
+    }
+
+    private void applyIntervalToUi(long interval) {
+        updatingIntervalUi = true;
+        settingsBinding.intervalInput.setText(String.valueOf(interval));
+        updatingIntervalUi = false;
+    }
+
+    private void saveInterval(long interval) {
+        appSettings.setCheckInterval(interval);
     }
 
     private void startAutoRefreshLog() {

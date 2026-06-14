@@ -28,20 +28,21 @@ public class BrightnessService extends Service {
     private static final String TAG = "BrightnessService";
     private static final String CHANNEL_ID = "brightness_monitor";
     private static final int NOTIFICATION_ID = 1001;
-    private static final long CHECK_INTERVAL_MS = 5_000L;
     public static final String ACTION_STATUS_CHANGED = "com.onedongua.smartbrightness.action.STATUS_CHANGED";
+    public static final String ACTION_UPDATE_INTERVAL = "com.onedongua.smartbrightness.action.UPDATE_INTERVAL";
     public static final String EXTRA_RUNNING = "running";
+    private long checkInterval;
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final Runnable periodicCheck = new Runnable() {
         @Override
         public void run() {
-            if (!periodicCheckRunning || !isScreenOn()) {
+            if (!periodicCheckRunning || !isScreenOn() || checkInterval <= 0) {
                 periodicCheckRunning = false;
                 return;
             }
             detectOnce();
-            handler.postDelayed(this, CHECK_INTERVAL_MS);
+            handler.postDelayed(this, checkInterval);
         }
     };
 
@@ -58,6 +59,7 @@ public class BrightnessService extends Service {
         super.onCreate();
         appSettings = new AppSettings(this);
         appSettings.setServiceRunning(true);
+        checkInterval = appSettings.getCheckInterval();
         sendStatusChanged(true);
         createNotificationChannel();
         startForeground(NOTIFICATION_ID, buildNotification());
@@ -78,11 +80,27 @@ public class BrightnessService extends Service {
             stopSelf();
             return START_NOT_STICKY;
         }
+        if (intent != null && ACTION_UPDATE_INTERVAL.equals(intent.getAction())) {
+            updateInterval();
+            return START_STICKY;
+        }
         if (isScreenOn()) {
             detectOnce();
             startPeriodicCheck();
         }
         return START_STICKY;
+    }
+
+    private void updateInterval() {
+        checkInterval = appSettings.getCheckInterval();
+        if (checkInterval <= 0) {
+            stopPeriodicCheck();
+        } else if (isScreenOn()) {
+            // Restart periodic check with new interval if screen is on
+            periodicCheckRunning = true;
+            handler.removeCallbacks(periodicCheck);
+            handler.postDelayed(periodicCheck, checkInterval);
+        }
     }
 
     @Nullable
@@ -141,12 +159,12 @@ public class BrightnessService extends Service {
     }
 
     private void startPeriodicCheck() {
-        if (periodicCheckRunning) {
+        if (periodicCheckRunning || checkInterval <= 0) {
             return;
         }
         periodicCheckRunning = true;
         handler.removeCallbacks(periodicCheck);
-        handler.postDelayed(periodicCheck, CHECK_INTERVAL_MS);
+        handler.postDelayed(periodicCheck, checkInterval);
     }
 
     private void stopPeriodicCheck() {
@@ -178,9 +196,9 @@ public class BrightnessService extends Service {
     }
 
     private void handleLux(float lux) {
-        Log.d(TAG, "Lux=" + lux);
         float thresholdLux = appSettings.getThresholdLux();
         String luxText = "Lux=" + lux;
+        Log.d(TAG, luxText);
         if (lux <= thresholdLux) {
             appLog.add("未达到阈值(" + thresholdLux + ")," + luxText);
             return;

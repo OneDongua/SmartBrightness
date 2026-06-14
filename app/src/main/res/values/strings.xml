@@ -31,4 +31,10 @@
     <string name="shizuku_not_running">Shizuku is not running</string>
     <string name="home">Home</string>
     <string name="logs">Logs</string>
+    <string name="interval_label">Check interval(ms):</string>
+    <string name="interval_input_hint">Enter check interval</string>
+    <string name="interval_invalid">Invalid interval</string>
+    <string name="interval_check_toast">Check interval set to %1$s ms</string>
+    <string name="interval_check_disabled_toast">Timed check disabled</string>
+    <string name="check">Check</string>
 </resources>

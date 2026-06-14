@@ -32,4 +32,10 @@
     <string name="shizuku_not_running">Shizuku 未运行</string>
     <string name="home">主页</string>
     <string name="logs">日志</string>
+    <string name="interval_label">检测间隔(毫秒):</string>
+    <string name="interval_input_hint">输入检测间隔时间</string>
+    <string name="interval_invalid">无效的间隔时间</string>
+    <string name="interval_check_toast">已设置检测间隔为 %1$s ms</string>
+    <string name="interval_check_disabled_toast">已禁用定时检测</string>
+    <string name="check">确认</string>
 </resources>
