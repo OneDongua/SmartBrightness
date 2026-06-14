@@ -25,6 +25,7 @@
     <string name="clear_logs">Clear logs</string>
     <string name="no_logs">No logs</string>
     <string name="shizuku_error">Shizuku error</string>
+    <string name="shizuku_not_running">Shizuku is not running</string>
     <string name="home">Home</string>
     <string name="logs">Logs</string>
 </resources>

@@ -160,7 +160,7 @@ public class MainActivity extends AppCompatActivity {
             // Binder is dead
             appSettings.setServiceEnabled(false);
             refreshServiceControlUi();
-            toast(R.string.shizuku_error);
+            toast(R.string.shizuku_not_running);
             return;
         }
 
