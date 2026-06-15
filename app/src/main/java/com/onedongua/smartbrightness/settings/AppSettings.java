@@ -18,7 +18,7 @@ public class AppSettings {
     private static final String KEY_HAS_RECORDED_DATA = "has_recorded_data";
     private static final String KEY_AUTO_RESTORE_MODE = "auto_restore_mode";
     private static final String KEY_AUTO_RESTORE_BELOW = "auto_restore_below";
-    private static final float DEFAULT_THRESHOLD_LUX = 500f;
+    private static final float DEFAULT_THRESHOLD_LUX = 1000f;
     private static final long DEFAULT_CHECK_INTERVAL = 0;
     private static final int DEFAULT_AUTO_RESTORE_BELOW = 400;
 
