@@ -47,10 +47,6 @@ public class Result implements Parcelable {
         return new Result(-1, "", stderr == null ? "" : stderr);
     }
 
-    public static Result pending() {
-        return new Result(-2, "", "");
-    }
-
     public static Result collectResult(Process process) throws IOException, InterruptedException {
         int exitCode = process.waitFor();
         String stdout = readAll(process.getInputStream());
