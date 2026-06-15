@@ -4,6 +4,7 @@ import android.content.Context;
 import android.provider.Settings;
 import android.util.Log;
 
+import com.onedongua.smartbrightness.executor.Result;
 import com.onedongua.smartbrightness.executor.ShellExecutor;
 
 public class BrightnessController {
@@ -49,7 +50,7 @@ public class BrightnessController {
     }
 
     public boolean enableAutoBrightness() {
-        ShellExecutor.Result result = shellExecutor.execute(ENABLE_AUTO_BRIGHTNESS_COMMAND);
+        Result result = shellExecutor.execute(ENABLE_AUTO_BRIGHTNESS_COMMAND);
         if (!result.success) {
             Log.w(TAG, "Enable auto brightness failed: " + result.stderr);
         }
@@ -57,7 +58,7 @@ public class BrightnessController {
     }
 
     public boolean disableAutoBrightness() {
-        ShellExecutor.Result result = shellExecutor.execute(DISABLE_AUTO_BRIGHTNESS_COMMAND);
+        Result result = shellExecutor.execute(DISABLE_AUTO_BRIGHTNESS_COMMAND);
         if (!result.success) {
             Log.w(TAG, "Disable auto brightness failed: " + result.stderr);
         }
@@ -66,7 +67,7 @@ public class BrightnessController {
 
     public boolean setBrightness(int brightness) {
         String command = String.format(SET_BRIGHTNESS_COMMAND_FORMAT, brightness);
-        ShellExecutor.Result result = shellExecutor.execute(command);
+        Result result = shellExecutor.execute(command);
         if (!result.success) {
             Log.w(TAG, "Set brightness failed: " + result.stderr);
         }

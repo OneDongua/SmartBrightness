@@ -55,9 +55,11 @@ public class BrightnessService extends Service {
     private BrightnessController brightnessController;
     private AppSettings appSettings;
     private AppLog appLog;
+    private ShellExecutor shellExecutor;
     private ScreenReceiver screenReceiver;
     private volatile boolean receiverRegistered;
     private volatile boolean periodicCheckRunning;
+    private boolean isFirstCheck = true;
 
     @Override
     public void onCreate() {
@@ -73,7 +75,7 @@ public class BrightnessService extends Service {
         createNotificationChannel();
         startForeground(NOTIFICATION_ID, buildNotification());
 
-        ShellExecutor shellExecutor = new ShellExecutor(this);
+        shellExecutor = new ShellExecutor(this);
         appLog = new AppLog(this);
         lightSensorManager = new LightSensorManager(this, workerHandler);
         brightnessController = new BrightnessController(this, shellExecutor);
@@ -133,6 +135,9 @@ public class BrightnessService extends Service {
         if (lightSensorManager != null) {
             lightSensorManager.release();
         }
+        if (shellExecutor != null) {
+            shellExecutor.destroy();
+        }
         if (appSettings != null) {
             appSettings.setServiceRunning(false);
         }
@@ -165,7 +170,7 @@ public class BrightnessService extends Service {
 
     private void onScreenOn() {
         startPeriodicCheck();
-        detectOnce();
+        workerHandler.post(this::detectOnce);
     }
 
     private void onScreenOff() {
@@ -264,6 +269,12 @@ public class BrightnessService extends Service {
                 int currentBrightness = brightnessController.getCurrentBrightness();
 
                 if (lux > thresholdLux) {
+                    if (isFirstCheck) {
+                        appSettings.setRecordedLux(lux);
+                        appSettings.setRecordedBrightness(currentBrightness);
+                        appSettings.setHasRecordedData(true);
+                        appLog.add("首次超过阈值,记录Lux=" + lux + ",亮度=" + currentBrightness);
+                    }
                     brightnessController.enableAutoBrightness();
                     appLog.add("开启自动亮度," + luxText);
                     Log.i(TAG, "Auto brightness enabled (recorded lux=" + lux + ", brightness=" + currentBrightness + ")");
@@ -274,6 +285,7 @@ public class BrightnessService extends Service {
                     appLog.add("未达到阈值(" + thresholdLux + "),记录Lux=" + lux + ",亮度=" + currentBrightness);
                 }
             }
+            isFirstCheck = false;
             return;
         }
 

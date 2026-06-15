@@ -1,24 +1,83 @@
 package com.onedongua.smartbrightness.executor;
 
-import android.content.Context;
-import android.content.pm.PackageManager;
+import static com.onedongua.smartbrightness.executor.Result.collectResult;
 
+import android.content.ComponentName;
+import android.content.Context;
+import android.content.ServiceConnection;
+import android.content.pm.PackageManager;
+import android.os.IBinder;
+import android.os.RemoteException;
+import android.util.Log;
+
+import com.onedongua.smartbrightness.BuildConfig;
+import com.onedongua.smartbrightness.IUserService;
+import com.onedongua.smartbrightness.service.UserService;
 import com.onedongua.smartbrightness.settings.AppSettings;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.lang.reflect.Method;
-import java.nio.charset.StandardCharsets;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import rikka.shizuku.Shizuku;
 
 public class ShellExecutor {
+    private static final String TAG = "ShellExecutor";
     private final AppSettings appSettings;
+    private volatile IUserService service;
+    private final CountDownLatch connectLatch = new CountDownLatch(1);
+    private volatile boolean connectAttempted;
+
+    private final ServiceConnection userServiceConnection = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName componentName, IBinder binder) {
+            if (binder != null && binder.pingBinder()) {
+                service = IUserService.Stub.asInterface(binder);
+                connectLatch.countDown();
+            } else {
+                Log.e(TAG, "onServiceConnected: binder has been killed");
+            }
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName componentName) {
+            service = null;
+        }
+    };
+
+    private final Shizuku.UserServiceArgs userServiceArgs =
+            new Shizuku.UserServiceArgs(
+                    new ComponentName(
+                            BuildConfig.APPLICATION_ID,
+                            UserService.class.getName()
+                    ))
+                    .daemon(false)
+                    .processNameSuffix("service")
+                    .debuggable(BuildConfig.DEBUG)
+                    .version(BuildConfig.VERSION_CODE);
+
+    private void bindUserService() {
+        try {
+            if (Shizuku.getVersion() >= 10 && Shizuku.pingBinder()) {
+                Shizuku.bindUserService(userServiceArgs, userServiceConnection);
+            }
+        } catch (Throwable tr) {
+            Log.e(TAG, "bindUserService: ", tr);
+        }
+    }
+
+    private void unbindUserService() {
+        try {
+            if (Shizuku.getVersion() >= 10) {
+                Shizuku.unbindUserService(userServiceArgs, userServiceConnection, true);
+            }
+        } catch (Throwable tr) {
+            Log.e(TAG, "unbindUserService: ", tr);
+        }
+    }
 
     public ShellExecutor(Context context) {
         appSettings = new AppSettings(context);
+        bindUserService();
     }
 
     public Result execute(String command) {
@@ -36,29 +95,32 @@ public class ShellExecutor {
                     || Shizuku.checkSelfPermission() != PackageManager.PERMISSION_GRANTED) {
                 return Result.failure("Shizuku permission unavailable");
             }
-            Method newProcess = Shizuku.class.getDeclaredMethod(
-                    "newProcess",
-                    String[].class,
-                    String[].class,
-                    String.class
-            );
-            newProcess.setAccessible(true);
-            Process process = (Process) newProcess.invoke(
-                    null,
-                    new String[]{"sh", "-c", command},
-                    null,
-                    null
-            );
-            if (process == null) throw new IOException("Failed to create process");
-            return collectResult(process);
+
+            // Fast path: service already connected
+            IUserService svc = service;
+            if (svc != null) {
+                return svc.execute(command);
+            }
+
+            // First call: wait for the bind initiated in constructor to complete
+            if (!connectAttempted) {
+                connectAttempted = true;
+                try {
+                    connectLatch.await(3, TimeUnit.SECONDS);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    return Result.failure("Interrupted while waiting for UserService");
+                }
+            }
+
+            svc = service;
+            if (svc != null) {
+                return svc.execute(command);
+            }
+            return Result.failure("UserService not connected");
         } catch (Exception e) {
             return Result.failure(e.getMessage());
         }
-    }
-
-    public enum Mode {
-        SHIZUKU,
-        ROOT
     }
 
     private Result executeWithRoot(String command) {
@@ -70,43 +132,20 @@ public class ShellExecutor {
         }
     }
 
-    private Result collectResult(Process process) throws IOException, InterruptedException {
-        int exitCode = process.waitFor();
-        String stdout = readAll(process.getInputStream());
-        String stderr = readAll(process.getErrorStream());
-        return new Result(exitCode, stdout, stderr);
-    }
-
-    private String readAll(InputStream stream) throws IOException {
-        StringBuilder builder = new StringBuilder();
-        try (BufferedReader reader = new BufferedReader(
-                new InputStreamReader(stream, StandardCharsets.UTF_8))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                if (builder.length() > 0) {
-                    builder.append('\n');
-                }
-                builder.append(line);
+    public void destroy() {
+        IUserService svc = service;
+        unbindUserService();
+        if (svc != null) {
+            try {
+                svc.destroy();
+            } catch (RemoteException e) {
+                Log.e(TAG, "destroy: ", e);
             }
         }
-        return builder.toString();
     }
 
-    public static class Result {
-        public final int exitCode;
-        public final String stdout;
-        public final String stderr;
-        public final boolean success;
-
-        Result(int exitCode, String stdout, String stderr) {
-            this.exitCode = exitCode;
-            this.stdout = stdout;
-            this.stderr = stderr;
-            this.success = exitCode == 0;
-        }
-
-        static Result failure(String stderr) {
-            return new Result(-1, "", stderr == null ? "" : stderr);
-        }
+    public enum Mode {
+        SHIZUKU,
+        ROOT
     }
 }
