@@ -37,7 +37,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="16dp">
+            android:padding="24dp">
 
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
@@ -158,6 +158,7 @@
                                 app:tint="?attr/colorSecondary" />
                         </LinearLayout>
                     </FrameLayout>
+
                 </LinearLayout>
 
             </com.google.android.material.card.MaterialCardView>
@@ -260,6 +261,118 @@
 
                     </LinearLayout>
 
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="2dp"
+                        android:background="?attr/colorSurface" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="vertical"
+                        android:padding="24dp">
+
+                        <com.google.android.material.materialswitch.MaterialSwitch
+                            android:id="@+id/autoRestoreSwitch"
+                            style="?attr/materialSwitchStyle"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:checked="false"
+                            android:text="@string/auto_restore_label"
+                            android:textColor="?attr/colorOnSurface"
+                            android:textSize="16sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/auto_restore_desc"
+                            android:textColor="?attr/colorOnSurfaceVariant"
+                            android:textSize="14sp" />
+
+
+                        <FrameLayout
+                            android:id="@+id/restoreModeBg"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="24dp">
+
+                            <TextView
+                                android:id="@+id/restoreModeLabel"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_gravity="start|center"
+                                android:text="@string/auto_restore_mode"
+                                android:textColor="?attr/colorOnSurface"
+                                android:textSize="16sp"
+                                android:textStyle="bold" />
+
+                            <LinearLayout
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_gravity="end|center"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal">
+
+                                <TextView
+                                    android:id="@+id/restoreModeText"
+                                    android:layout_width="80dp"
+                                    android:layout_height="wrap_content"
+                                    android:gravity="end"
+                                    android:textColor="?attr/colorSecondary"
+                                    android:textSize="16sp" />
+
+                                <ImageView
+                                    android:layout_width="16dp"
+                                    android:layout_height="16dp"
+                                    android:contentDescription="@string/mode_hint"
+                                    android:src="@drawable/ic_arrow_drop_down"
+                                    app:tint="?attr/colorSecondary" />
+                            </LinearLayout>
+                        </FrameLayout>
+
+
+                        <LinearLayout
+                            android:id="@+id/belowBg"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal"
+                            android:layout_marginTop="24dp">
+
+                            <TextView
+                                android:id="@+id/belowLabel"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/auto_restore_below_label"
+                                android:textColor="?attr/colorOnSurface"
+                                android:textSize="16sp"
+                                android:textStyle="bold" />
+
+                            <EditText
+                                android:id="@+id/belowInput"
+                                style="@style/Widget.AppCompat.EditText"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:autofillHints="value"
+                                android:hint="@string/auto_restore_below_hint"
+                                android:inputType="number"
+                                android:maxLines="1" />
+
+                            <ImageButton
+                                android:id="@+id/applyBelowButton"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:background="?attr/selectableItemBackgroundBorderless"
+                                android:contentDescription="@string/check"
+                                android:src="@drawable/ic_check_circle"
+                                app:tint="?attr/colorOnSurface" />
+
+                        </LinearLayout>
+                    </LinearLayout>
+
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
@@ -275,9 +388,9 @@
                     android:id="@+id/requestNotificationBg"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:background="?attr/selectableItemBackgroundBorderless"
                     android:orientation="vertical"
-                    android:padding="24dp"
-                    android:background="?attr/selectableItemBackgroundBorderless">
+                    android:padding="24dp">
 
                     <TextView
                         android:id="@+id/notificationText"
@@ -292,10 +405,10 @@
                         android:id="@+id/notificationDesc"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
                         android:text="@string/notification_permission_desc"
                         android:textColor="?attr/colorOnSurfaceVariant"
-                        android:textSize="14sp"
-                        android:layout_marginTop="8dp"/>
+                        android:textSize="14sp" />
 
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>

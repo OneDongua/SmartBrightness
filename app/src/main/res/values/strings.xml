@@ -40,4 +40,12 @@
     <string name="notification_permission_request_title">Request notification permission</string>
     <string name="notification_permission_granted_title">Notification permission granted</string>
     <string name="notification_permission_desc">Notification permission is required to indicate the status of the service</string>
+    <string name="auto_restore_label">Auto-Restore brightness</string>
+    <string name="auto_restore_desc">Restore brightness when light returns</string>
+    <string name="auto_restore_mode">Auto-Restore mode</string>
+    <string name="auto_restore_mode_0">Around</string>
+    <string name="auto_restore_mode_1">Below</string>
+    <string name="auto_restore_below_hint">Enter lux</string>
+    <string name="auto_restore_below_label">Below ambient:</string>
+    <string name="set_successful">Set successful</string>
 </resources>

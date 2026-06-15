@@ -41,4 +41,12 @@
     <string name="notification_permission_request_title">请求通知权限</string>
     <string name="notification_permission_granted_title">已获得通知权限</string>
     <string name="notification_permission_desc">通知权限用于显示服务运行状态</string>
+    <string name="auto_restore_label">自动恢复亮度</string>
+    <string name="auto_restore_desc">环境光恢复后自动回退</string>
+    <string name="auto_restore_mode">自动恢复触发条件</string>
+    <string name="auto_restore_mode_0">接近</string>
+    <string name="auto_restore_mode_1">低于</string>
+    <string name="auto_restore_below_hint">输入 Lux 值</string>
+    <string name="auto_restore_below_label">低于环境光:</string>
+    <string name="set_successful">设置成功</string>
 </resources>

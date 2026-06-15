@@ -16,6 +16,7 @@ import android.util.Log;
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 
+import com.onedongua.smartbrightness.BuildConfig;
 import com.onedongua.smartbrightness.R;
 import com.onedongua.smartbrightness.brightness.BrightnessController;
 import com.onedongua.smartbrightness.executor.ShellExecutor;
@@ -28,6 +29,7 @@ public class BrightnessService extends Service {
     private static final String TAG = "BrightnessService";
     private static final String CHANNEL_ID = "brightness_monitor";
     private static final int NOTIFICATION_ID = 1001;
+    private static final float LUX_RESTORE_TOLERANCE = 100.0f;
     public static final String ACTION_STATUS_CHANGED = "com.onedongua.smartbrightness.action.STATUS_CHANGED";
     public static final String ACTION_UPDATE_INTERVAL = "com.onedongua.smartbrightness.action.UPDATE_INTERVAL";
     public static final String EXTRA_RUNNING = "running";
@@ -198,12 +200,74 @@ public class BrightnessService extends Service {
     private void handleLux(float lux) {
         float thresholdLux = appSettings.getThresholdLux();
         String luxText = "Lux=" + lux;
-        Log.d(TAG, luxText);
+        if (BuildConfig.DEBUG) Log.d(TAG, luxText);
+
+        boolean autoBrightnessEnabled = brightnessController.isAutoBrightnessEnabled();
+
+        if (appSettings.isAutoRestoreEnabled()) {
+
+            if (autoBrightnessEnabled) {
+                if (appSettings.getAutoRestoreMode() == 0) {
+                    if (appSettings.hasRecordedData()) {
+                        if (Math.abs(lux - thresholdLux) <= LUX_RESTORE_TOLERANCE) {
+                            // 环境光接近阈值，不恢复避免反复开关
+                            appLog.add("环境光(" + lux + ")接近阈值(" + thresholdLux + ")");
+                        } else {
+                            float recordedLux = appSettings.getRecordedLux();
+                            if (Math.abs(lux - recordedLux) <= LUX_RESTORE_TOLERANCE) {
+                                int recordedBrightness = appSettings.getRecordedBrightness();
+                                boolean disabled = brightnessController.disableAutoBrightness();
+                                boolean restored = false;
+                                if (disabled) {
+                                    restored = brightnessController.setBrightness(recordedBrightness);
+                                }
+                                appLog.add("恢复亮度(" + recordedBrightness + "),环境光(" + lux + ")接近记录值(" + recordedLux + ")");
+                                Log.i(TAG, "Restored brightness to " + recordedBrightness + ", disable auto: " + disabled + ", restore brightness: " + restored);
+                            } else {
+                                appLog.add("环境光(" + lux + ")未接近记录值(" + recordedLux + ")");
+                            }
+                        }
+                    } else {
+                        appLog.add("未记录数据");
+                    }
+                } else if (appSettings.getAutoRestoreMode() == 1) {
+                    int belowLux = appSettings.getAutoRestoreBelow();
+                    if (lux < belowLux) {
+                        int recordedBrightness = appSettings.getRecordedBrightness();
+                        if (recordedBrightness != -1) {
+                            boolean disabled = brightnessController.disableAutoBrightness();
+                            boolean restored = false;
+                            if (disabled) {
+                                restored = brightnessController.setBrightness(recordedBrightness);
+                            }
+                            appLog.add("恢复亮度(" + recordedBrightness + "),环境光(" + lux + ")低于设置值(" + belowLux + ")");
+                            Log.i(TAG, "Restored brightness to " + recordedBrightness + ", disable auto: " + disabled + ", restore brightness: " + restored);
+                        }
+                    }
+                }
+            } else {
+                int currentBrightness = brightnessController.getCurrentBrightness();
+
+                if (lux > thresholdLux) {
+                    brightnessController.enableAutoBrightness();
+                    appLog.add("开启自动亮度," + luxText);
+                    Log.i(TAG, "Auto brightness enabled (recorded lux=" + lux + ", brightness=" + currentBrightness + ")");
+                } else {
+                    appSettings.setRecordedLux(lux);
+                    appSettings.setRecordedBrightness(currentBrightness);
+                    appSettings.setHasRecordedData(true);
+                    appLog.add("未达到阈值(" + thresholdLux + "),记录Lux=" + lux + ",亮度=" + currentBrightness);
+                }
+            }
+            return;
+        }
+
+        // Legacy logic if Auto-Restore is disabled
         if (lux <= thresholdLux) {
             appLog.add("未达到阈值(" + thresholdLux + ")," + luxText);
             return;
         }
-        if (brightnessController.isAutoBrightnessEnabled()) {
+        if (autoBrightnessEnabled) {
             appLog.add("已是自动亮度," + luxText);
             return;
         }

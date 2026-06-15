@@ -123,6 +123,8 @@ public class MainActivity extends AppCompatActivity {
         initSettingsUi();
         initLogUi();
 
+        // 清除上次的亮度记录数据
+        appSettings.clearRecordedData();
         Shizuku.addRequestPermissionResultListener(REQUEST_PERMISSION_RESULT_LISTENER);
         startServiceIfEnabled();
     }
@@ -372,36 +374,44 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        String[] items = {
+        settingsBinding.autoRestoreSwitch.setChecked(appSettings.isAutoRestoreEnabled());
+        settingsBinding.autoRestoreSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            appSettings.setAutoRestoreEnabled(isChecked);
+            if (!isChecked) {
+                appSettings.clearRecordedData();
+            }
+        });
+
+        String[] modeItems = {
                 ShellExecutor.Mode.SHIZUKU.name(),
                 ShellExecutor.Mode.ROOT.name()
         };
 
-        ArrayAdapter<String> adapter =
+        ArrayAdapter<String> modeAdapter =
                 new ArrayAdapter<>(
                         this,
                         R.layout.dropdown_list_item,
-                        items);
+                        modeItems);
 
-        ListPopupWindow popup = new ListPopupWindow(this);
-        popup.setAdapter(adapter);
-        popup.setAnchorView(settingsBinding.modeText);
-        popup.setHorizontalOffset(dp2px(8));
-        popup.setModal(true);
-        popup.setWidth(dp2px(80));
+        ListPopupWindow modePopup = new ListPopupWindow(this);
+        modePopup.setAdapter(modeAdapter);
+        modePopup.setAnchorView(settingsBinding.modeText);
+        modePopup.setHorizontalOffset(dp2px(8));
+        modePopup.setModal(true);
+        modePopup.setWidth(dp2px(80));
 
-        settingsBinding.modeBg.setOnClickListener(v -> popup.show());
+        settingsBinding.modeBg.setOnClickListener(v -> modePopup.show());
 
         settingsBinding.modeText.setText(appSettings.getShellMode().name());
 
-        popup.setOnItemClickListener((parent, view, position, id) -> {
+        modePopup.setOnItemClickListener((parent, view, position, id) -> {
             ShellExecutor.Mode mode = position == 1
                     ? ShellExecutor.Mode.ROOT
                     : ShellExecutor.Mode.SHIZUKU;
             appSettings.setShellMode(mode);
             settingsBinding.modeText.setText(mode.name());
             if (checkAbility()) refreshServiceStatus();
-            popup.dismiss();
+            modePopup.dismiss();
         });
 
         applyThresholdToUi(appSettings.getThresholdLux());
@@ -461,6 +471,53 @@ public class MainActivity extends AppCompatActivity {
                 } else {
                     toast(R.string.interval_check_disabled_toast);
                 }
+            } catch (NumberFormatException ignored) {
+                toast(R.string.interval_invalid);
+            }
+        });
+
+
+        String[] restoreModeItems = {
+                getString(R.string.auto_restore_mode_0),
+                getString(R.string.auto_restore_mode_1),
+        };
+
+        ArrayAdapter<String> restoreModeAdapter =
+                new ArrayAdapter<>(
+                        this,
+                        R.layout.dropdown_list_item,
+                        restoreModeItems);
+
+        ListPopupWindow restorePopup = new ListPopupWindow(this);
+        restorePopup.setAdapter(restoreModeAdapter);
+        restorePopup.setAnchorView(settingsBinding.restoreModeText);
+        restorePopup.setHorizontalOffset(dp2px(8));
+        restorePopup.setModal(true);
+        restorePopup.setWidth(dp2px(80));
+
+        settingsBinding.restoreModeBg.setOnClickListener(v -> restorePopup.show());
+
+        settingsBinding.restoreModeText.setText(restoreModeItems[appSettings.getAutoRestoreMode()]);
+
+        restorePopup.setOnItemClickListener((parent, view, position, id) -> {
+            appSettings.setAutoRestoreMode(position);
+            settingsBinding.restoreModeText.setText(restoreModeItems[position]);
+            settingsBinding.belowBg.setVisibility(position == 0 ? View.GONE : View.VISIBLE);
+            restorePopup.dismiss();
+        });
+
+        settingsBinding.belowBg.setVisibility(appSettings.getAutoRestoreMode() == 0 ? View.GONE : View.VISIBLE);
+        settingsBinding.belowInput.setText(String.valueOf(appSettings.getAutoRestoreBelow()));
+        settingsBinding.applyBelowButton.setOnClickListener(v -> {
+            String value = settingsBinding.belowInput.getText().toString().trim();
+            if (value.isEmpty()) {
+                toast(R.string.interval_invalid);
+                return;
+            }
+            try {
+                int below = Integer.parseInt(value);
+                appSettings.setAutoRestoreBelow(below);
+                toast(R.string.set_successful);
             } catch (NumberFormatException ignored) {
                 toast(R.string.interval_invalid);
             }
