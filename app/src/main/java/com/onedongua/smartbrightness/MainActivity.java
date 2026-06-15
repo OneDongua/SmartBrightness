@@ -9,6 +9,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -28,6 +29,7 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.StringRes;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.ListPopupWindow;
+import androidx.appcompat.widget.Toolbar;
 import androidx.appcompat.widget.TooltipCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.res.ResourcesCompat;
@@ -36,8 +38,10 @@ import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.viewpager2.widget.ViewPager2;
 
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.onedongua.smartbrightness.adapter.MainPagerAdapter;
 import com.onedongua.smartbrightness.databinding.ActivityMainBinding;
+import com.onedongua.smartbrightness.databinding.DialogInfoBinding;
 import com.onedongua.smartbrightness.databinding.ViewLogsBinding;
 import com.onedongua.smartbrightness.databinding.ViewSettingsBinding;
 import com.onedongua.smartbrightness.executor.ShellExecutor;
@@ -362,6 +366,24 @@ public class MainActivity extends AppCompatActivity {
 
     @SuppressLint("ClickableViewAccessibility")
     private void initSettingsUi() {
+        settingsBinding.toolbar.setOnMenuItemClickListener(new Toolbar.OnMenuItemClickListener() {
+            @SuppressLint("SetTextI18n")
+            @Override
+            public boolean onMenuItemClick(MenuItem item) {
+                if (item.getItemId() == R.id.action_info) {
+                    DialogInfoBinding dialogBinding = DialogInfoBinding.inflate(getLayoutInflater());
+                    dialogBinding.ivAppIcon.setImageDrawable(
+                            ResourcesCompat.getDrawable(getResources(), R.drawable.ic_launcher, getTheme()));
+                    dialogBinding.tvAppVersion.setText(BuildConfig.VERSION_NAME + " (" + BuildConfig.VERSION_CODE + ")");
+                    new MaterialAlertDialogBuilder(MainActivity.this)
+                            .setView(dialogBinding.getRoot())
+                            .show();
+                } else if (item.getItemId() == R.id.action_github) {
+                    startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/OneDongua/SmartBrightness")));
+                }
+                return true;
+            }
+        });
         refreshServiceControlUi();
         settingsBinding.serviceSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
             if (updatingServiceSwitch) {

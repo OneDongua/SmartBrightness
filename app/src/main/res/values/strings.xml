@@ -50,4 +50,7 @@
     <string name="set_successful">Set successful</string>
     <string name="warning_miui">If you are using MIUI/HyperOS, please set the battery saver to No Restrictions and lock the app in the background.</string>
     <string name="exit_and_hide">Exit and hide in multi-task</string>
+    <string name="info">Info</string>
+    <string name="github">Github</string>
+    <string name="app_author">OneDongua</string>
 </resources>
