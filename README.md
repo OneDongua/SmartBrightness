@@ -1,6 +1,6 @@
 # SmartBrightness
 
-<img height="256" width="256" src="./app/src/main/res/drawable/ic_launcher.png" alt="app_icon">
+<img height="128" width="128" src="./app/src/main/res/drawable/ic_launcher.png" alt="app_icon">
 
 **智能自动亮度**是一款安卓亮度调节工具，主要功能为根据当前环境光亮度自动开关系统自动亮度功能，支持 **Shizuku** 和 **Root** 两种模式。
 
@@ -58,3 +58,7 @@ com.onedongua.smartbrightness
 ## 🤝 贡献
 
 如果您有任何好的想法或发现了 Bug，欢迎提交 Issue 或 Pull Request。
+
+## 📄 许可证
+
+本项目使用 [Apache License 2.0](./LICENSE.txt) 许可证
