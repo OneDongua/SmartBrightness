@@ -216,7 +216,6 @@ public class BrightnessService extends Service {
         return new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_stat_brightness)
                 .setContentTitle(getString(R.string.notification_title))
-                .setContentText(getString(R.string.notification_text))
                 .setOngoing(true)
                 .setPriority(NotificationCompat.PRIORITY_LOW)
                 .build();

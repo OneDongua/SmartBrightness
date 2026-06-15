@@ -37,4 +37,7 @@
     <string name="interval_check_toast">Check interval set to %1$s ms</string>
     <string name="interval_check_disabled_toast">Timed check disabled</string>
     <string name="check">Check</string>
+    <string name="notification_permission_request_title">Request notification permission</string>
+    <string name="notification_permission_granted_title">Notification permission granted</string>
+    <string name="notification_permission_desc">Notification permission is required to indicate the status of the service</string>
 </resources>

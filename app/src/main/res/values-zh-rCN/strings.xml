@@ -38,4 +38,7 @@
     <string name="interval_check_toast">已设置检测间隔为 %1$s ms</string>
     <string name="interval_check_disabled_toast">已禁用定时检测</string>
     <string name="check">确认</string>
+    <string name="notification_permission_request_title">请求通知权限</string>
+    <string name="notification_permission_granted_title">已获得通知权限</string>
+    <string name="notification_permission_desc">通知权限用于显示服务运行状态</string>
 </resources>

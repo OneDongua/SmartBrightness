@@ -1,5 +1,6 @@
 package com.onedongua.smartbrightness;
 
+import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.ActivityManager;
 import android.content.BroadcastReceiver;
@@ -7,9 +8,11 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.provider.Settings;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.TypedValue;
@@ -19,6 +22,8 @@ import android.widget.ArrayAdapter;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.StringRes;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.ListPopupWindow;
@@ -87,6 +92,21 @@ public class MainActivity extends AppCompatActivity {
         }
     };
     private final Shizuku.OnRequestPermissionResultListener REQUEST_PERMISSION_RESULT_LISTENER = this::onRequestPermissionsResult;
+    private final ActivityResultLauncher<String> requestPermissionLauncher =
+            registerForActivityResult(new ActivityResultContracts.RequestPermission(),
+                    isGranted -> {
+                        if (isGranted) {
+                            refreshNotificationStatus();
+                        } else {
+                            openNotificationSettings();
+                        }
+                    });
+
+    private void openNotificationSettings() {
+        Intent intent = new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS);
+        intent.putExtra(Settings.EXTRA_APP_PACKAGE, getPackageName());
+        startActivity(intent);
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -124,7 +144,7 @@ public class MainActivity extends AppCompatActivity {
             toast(R.string.permission_granted_shizuku);
             startBrightnessService();
         } else {
-            appSettings.setServiceEnabled(false);
+            setService(false);
             refreshServiceControlUi();
         }
     }
@@ -168,7 +188,7 @@ public class MainActivity extends AppCompatActivity {
     private void checkAndStartShizuku() {
         if (Shizuku.isPreV11()) {
             // Pre-v11 is unsupported
-            appSettings.setServiceEnabled(false);
+            setService(false);
             refreshServiceControlUi();
             toast(R.string.shizuku_error);
             return;
@@ -176,7 +196,7 @@ public class MainActivity extends AppCompatActivity {
 
         if (!Shizuku.pingBinder()) {
             // Binder is dead
-            appSettings.setServiceEnabled(false);
+            setService(false);
             refreshServiceControlUi();
             toast(R.string.shizuku_not_running);
             return;
@@ -188,12 +208,12 @@ public class MainActivity extends AppCompatActivity {
             startBrightnessService();
         } else if (Shizuku.shouldShowRequestPermissionRationale()) {
             // Users choose "Deny and don't ask again"
-            appSettings.setServiceEnabled(false);
+            setService(false);
             refreshServiceControlUi();
             toast(R.string.permission_denied_shizuku);
         } else {
             // Request the permission
-            appSettings.setServiceEnabled(false);
+            setService(false);
             refreshServiceControlUi();
             Shizuku.requestPermission(REQUEST_CODE_PERMISSION_SHIZUKU);
         }
@@ -218,24 +238,25 @@ public class MainActivity extends AppCompatActivity {
             startBrightnessService();
         } else {
             toast(R.string.permission_denied_root);
-            appSettings.setServiceEnabled(false);
+            setService(false);
             refreshServiceControlUi();
         }
     }
 
-    private boolean checkPermission() {
+    private boolean checkAbility() {
         ShellExecutor.Mode mode = appSettings.getShellMode();
         if (mode == ShellExecutor.Mode.ROOT) {
             if (!checkRootPermission()) {
                 toast(R.string.permission_denied_root);
-                appSettings.setServiceEnabled(false);
+                setService(false);
                 refreshServiceControlUi();
                 return false;
             }
         } else if (mode == ShellExecutor.Mode.SHIZUKU) {
-            if (Shizuku.checkSelfPermission() != PackageManager.PERMISSION_GRANTED) {
-                toast(R.string.permission_denied_shizuku);
-                appSettings.setServiceEnabled(false);
+            if (Shizuku.isPreV11() || !Shizuku.pingBinder() ||
+                    Shizuku.checkSelfPermission() != PackageManager.PERMISSION_GRANTED) {
+                toast(R.string.shizuku_error);
+                setService(false);
                 refreshServiceControlUi();
                 return false;
             }
@@ -244,7 +265,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void startBrightnessService() {
-        appSettings.setServiceEnabled(true);
+        setService(true);
         refreshServiceStatus();
         Intent intent = new Intent(this, BrightnessService.class);
         startForegroundService(intent);
@@ -342,7 +363,7 @@ public class MainActivity extends AppCompatActivity {
             if (updatingServiceSwitch) {
                 return;
             }
-            appSettings.setServiceEnabled(isChecked);
+            setService(isChecked);
             if (isChecked) {
                 refreshServiceStatus();
                 startServiceForCurrentMode();
@@ -379,7 +400,7 @@ public class MainActivity extends AppCompatActivity {
                     : ShellExecutor.Mode.SHIZUKU;
             appSettings.setShellMode(mode);
             settingsBinding.modeText.setText(mode.name());
-            if (checkPermission()) refreshServiceStatus();
+            if (checkAbility()) refreshServiceStatus();
             popup.dismiss();
         });
 
@@ -444,6 +465,14 @@ public class MainActivity extends AppCompatActivity {
                 toast(R.string.interval_invalid);
             }
         });
+
+        settingsBinding.requestNotificationBg.setOnClickListener(v -> {
+            if (checkNotificationPermission()) return;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS);
+            }
+        });
+        refreshNotificationStatus();
     }
 
     private void initLogUi() {
@@ -505,6 +534,7 @@ public class MainActivity extends AppCompatActivity {
         settingsBinding.serviceSwitch.setChecked(appSettings.isServiceEnabled());
         updatingServiceSwitch = false;
         refreshServiceStatus();
+        refreshNotificationStatus();
     }
 
     private void refreshServiceStatus() {
@@ -531,6 +561,26 @@ public class MainActivity extends AppCompatActivity {
         settingsBinding.serviceStatusIcon.setImageDrawable(ResourcesCompat.getDrawable(getResources(), modeResId, getTheme()));
     }
 
+    private void refreshNotificationStatus() {
+        if (settingsBinding == null) return;
+        boolean granted = checkNotificationPermission();
+        settingsBinding.notificationText.setText(granted ?
+                R.string.notification_permission_granted_title :
+                R.string.notification_permission_request_title);
+        settingsBinding.notificationDesc.setVisibility(granted ? View.GONE : View.VISIBLE);
+    }
+
+    private boolean checkNotificationPermission() {
+        boolean granted;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            granted = ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+                    == PackageManager.PERMISSION_GRANTED;
+        } else {
+            granted = true;
+        }
+        return granted;
+    }
+
     private boolean isBrightnessServiceRunning() {
         ActivityManager manager = (ActivityManager) getSystemService(ACTIVITY_SERVICE);
         if (manager == null) {
@@ -542,6 +592,15 @@ public class MainActivity extends AppCompatActivity {
             }
         }
         return false;
+    }
+
+    private void setService(boolean enabled) {
+        if (enabled) {
+            appSettings.setServiceEnabled(true);
+        } else {
+            appSettings.setServiceEnabled(false);
+            stopBrightnessService();
+        }
     }
 
     private void registerServiceStatusReceiver() {
