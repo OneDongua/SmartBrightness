@@ -133,7 +133,6 @@ public class AppSettings {
                 .apply();
     }
 
-
     public int getAutoRestoreMode() {
         return preferences.getInt(KEY_AUTO_RESTORE_MODE, 0);
     }

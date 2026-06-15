@@ -547,6 +547,10 @@ public class MainActivity extends AppCompatActivity {
                 }
             });
         }
+
+        settingsBinding.exitAndHideBg.setOnClickListener(v -> {
+            finishAndRemoveTask();
+        });
     }
 
     private void initLogUi() {

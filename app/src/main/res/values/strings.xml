@@ -49,4 +49,5 @@
     <string name="auto_restore_below_label">Below ambient:</string>
     <string name="set_successful">Set successful</string>
     <string name="warning_miui">If you are using MIUI/HyperOS, please set the battery saver to No Restrictions and lock the app in the background.</string>
+    <string name="exit_and_hide">Exit and hide in multi-task</string>
 </resources>
