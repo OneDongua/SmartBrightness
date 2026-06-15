@@ -4,6 +4,7 @@ import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.ActivityManager;
 import android.content.BroadcastReceiver;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
@@ -43,6 +44,7 @@ import com.onedongua.smartbrightness.executor.ShellExecutor;
 import com.onedongua.smartbrightness.log.AppLog;
 import com.onedongua.smartbrightness.service.BrightnessService;
 import com.onedongua.smartbrightness.settings.AppSettings;
+import com.onedongua.smartbrightness.util.OSUtils;
 
 import rikka.shizuku.Shizuku;
 
@@ -530,6 +532,21 @@ public class MainActivity extends AppCompatActivity {
             }
         });
         refreshNotificationStatus();
+
+        if (OSUtils.isMiOS()) {
+            settingsBinding.warning.setVisibility(View.VISIBLE);
+            settingsBinding.warningText.setText(R.string.warning_miui);
+            settingsBinding.warning.setOnClickListener(v -> {
+                try {
+                    Intent intent = new Intent();
+                    intent.setComponent(new ComponentName("com.miui.securitycenter",
+                            "com.miui.powercenter.legacypowerrank.PowerDetailActivity"));
+                    intent.putExtra("package_name", BuildConfig.APPLICATION_ID);
+                    startActivity(intent);
+                } catch (Exception ignored) {
+                }
+            });
+        }
     }
 
     private void initLogUi() {

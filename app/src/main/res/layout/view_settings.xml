@@ -95,6 +95,29 @@
                 </androidx.constraintlayout.widget.ConstraintLayout>
             </com.google.android.material.card.MaterialCardView>
 
+
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/warning"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:visibility="gone"
+                app:cardBackgroundColor="?attr/colorErrorContainer"
+                app:strokeColor="@color/transparent">
+
+                <TextView
+                    android:id="@+id/warningText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_margin="24dp"
+                    android:drawablePadding="24dp"
+                    android:textColor="?attr/colorOnErrorContainer"
+                    android:textSize="16sp"
+                    app:drawableStartCompat="@drawable/ic_warning"
+                    app:drawableTint="?attr/colorOnErrorContainer" />
+
+            </com.google.android.material.card.MaterialCardView>
+
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -337,9 +360,9 @@
                             android:id="@+id/belowBg"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
+                            android:layout_marginTop="24dp"
                             android:gravity="center_vertical"
-                            android:orientation="horizontal"
-                            android:layout_marginTop="24dp">
+                            android:orientation="horizontal">
 
                             <TextView
                                 android:id="@+id/belowLabel"

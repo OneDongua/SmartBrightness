@@ -48,4 +48,5 @@
     <string name="auto_restore_below_hint">Enter lux</string>
     <string name="auto_restore_below_label">Below ambient:</string>
     <string name="set_successful">Set successful</string>
+    <string name="warning_miui">If you are using MIUI/HyperOS, please set the battery saver to No Restrictions and lock the app in the background.</string>
 </resources>

@@ -49,4 +49,5 @@
     <string name="auto_restore_below_hint">输入 Lux 值</string>
     <string name="auto_restore_below_label">低于环境光:</string>
     <string name="set_successful">设置成功</string>
+    <string name="warning_miui">若您使用的是 MIUI/HyperOS，请设置省电策略为无限制，并锁定后台</string>
 </resources>
