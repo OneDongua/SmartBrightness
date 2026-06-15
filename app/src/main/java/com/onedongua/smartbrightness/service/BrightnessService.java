@@ -208,7 +208,7 @@ public class BrightnessService extends Service {
             return;
         }
         boolean enabled = brightnessController.enableAutoBrightness();
-        appLog.add((enabled ? "已开启自动亮度" : "开启自动亮度失败") + luxText + "\n");
+        appLog.add((enabled ? "已开启自动亮度" : "开启自动亮度失败") + "," + luxText);
         Log.i(TAG, enabled ? "Auto brightness enabled" : "Failed to enable auto brightness");
     }
 

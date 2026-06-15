@@ -223,6 +223,26 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private boolean checkPermission() {
+        ShellExecutor.Mode mode = appSettings.getShellMode();
+        if (mode == ShellExecutor.Mode.ROOT) {
+            if (!checkRootPermission()) {
+                toast(R.string.permission_denied_root);
+                appSettings.setServiceEnabled(false);
+                refreshServiceControlUi();
+                return false;
+            }
+        } else if (mode == ShellExecutor.Mode.SHIZUKU) {
+            if (Shizuku.checkSelfPermission() != PackageManager.PERMISSION_GRANTED) {
+                toast(R.string.permission_denied_shizuku);
+                appSettings.setServiceEnabled(false);
+                refreshServiceControlUi();
+                return false;
+            }
+        }
+        return true;
+    }
+
     private void startBrightnessService() {
         appSettings.setServiceEnabled(true);
         refreshServiceStatus();
@@ -359,8 +379,8 @@ public class MainActivity extends AppCompatActivity {
                     : ShellExecutor.Mode.SHIZUKU;
             appSettings.setShellMode(mode);
             settingsBinding.modeText.setText(mode.name());
+            if (checkPermission()) refreshServiceStatus();
             popup.dismiss();
-
         });
 
         applyThresholdToUi(appSettings.getThresholdLux());

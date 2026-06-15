@@ -13,7 +13,7 @@ public class AppSettings {
     private static final String KEY_SHELL_MODE = "shell_mode";
     private static final String KEY_CHECK_INTERVAL = "check_interval";
     private static final float DEFAULT_THRESHOLD_LUX = 500f;
-    private static final long DEFAULT_CHECK_INTERVAL = 5_000L;
+    private static final long DEFAULT_CHECK_INTERVAL = 0;
 
     private static final String MODE_SHIZUKU = "SHIZUKU";
     private static final String MODE_ROOT = "ROOT";

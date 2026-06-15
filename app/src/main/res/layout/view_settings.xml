@@ -99,7 +99,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
-                app:cardBackgroundColor="?attr/colorSecondaryContainer"
+                app:cardBackgroundColor="?attr/colorSurfaceContainer"
                 app:strokeColor="@color/transparent">
 
                 <LinearLayout
@@ -135,15 +135,28 @@
                             android:textSize="16sp"
                             android:textStyle="bold" />
 
-                        <TextView
-                            android:id="@+id/modeText"
-                            android:layout_width="80dp"
+                        <LinearLayout
+                            android:orientation="horizontal"
+                            android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_gravity="end|center"
-                            android:gravity="end"
-                            android:textColor="?attr/colorOnSurface"
-                            android:textSize="16sp" />
+                            android:gravity="center_vertical">
 
+                            <TextView
+                                android:id="@+id/modeText"
+                                android:layout_width="80dp"
+                                android:layout_height="wrap_content"
+                                android:gravity="end"
+                                android:textColor="?attr/colorSecondary"
+                                android:textSize="16sp" />
+
+                            <ImageView
+                                android:layout_width="16dp"
+                                android:layout_height="16dp"
+                                android:contentDescription="@string/mode_hint"
+                                android:src="@drawable/ic_arrow_drop_down"
+                                app:tint="?attr/colorSecondary" />
+                        </LinearLayout>
                     </FrameLayout>
                 </LinearLayout>
 
@@ -153,7 +166,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
-                app:cardBackgroundColor="?attr/colorSecondaryContainer"
+                app:cardBackgroundColor="?attr/colorSurfaceContainer"
                 app:strokeColor="@color/transparent">
 
                 <LinearLayout
@@ -206,7 +219,7 @@
 
                     <View
                         android:layout_width="match_parent"
-                        android:layout_height="4dp"
+                        android:layout_height="2dp"
                         android:background="?attr/colorSurface" />
 
                     <LinearLayout
@@ -243,7 +256,7 @@
                             android:background="?attr/selectableItemBackgroundBorderless"
                             android:contentDescription="@string/check"
                             android:src="@drawable/ic_check_circle"
-                            app:tint="?attr/colorPrimary" />
+                            app:tint="?attr/colorOnSurface" />
 
                     </LinearLayout>
 
