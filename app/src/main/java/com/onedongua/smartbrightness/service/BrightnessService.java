@@ -8,8 +8,8 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Build;
 import android.os.Handler;
+import android.os.HandlerThread;
 import android.os.IBinder;
-import android.os.Looper;
 import android.os.PowerManager;
 import android.util.Log;
 
@@ -35,7 +35,8 @@ public class BrightnessService extends Service {
     public static final String EXTRA_RUNNING = "running";
     private long checkInterval;
 
-    private final Handler handler = new Handler(Looper.getMainLooper());
+    private HandlerThread workerThread;
+    private Handler workerHandler;
     private final Runnable periodicCheck = new Runnable() {
         @Override
         public void run() {
@@ -44,7 +45,9 @@ public class BrightnessService extends Service {
                 return;
             }
             detectOnce();
-            handler.postDelayed(this, checkInterval);
+            if (workerHandler != null) {
+                workerHandler.postDelayed(this, checkInterval);
+            }
         }
     };
 
@@ -53,12 +56,16 @@ public class BrightnessService extends Service {
     private AppSettings appSettings;
     private AppLog appLog;
     private ScreenReceiver screenReceiver;
-    private boolean receiverRegistered;
-    private boolean periodicCheckRunning;
+    private volatile boolean receiverRegistered;
+    private volatile boolean periodicCheckRunning;
 
     @Override
     public void onCreate() {
         super.onCreate();
+        workerThread = new HandlerThread("BrightnessWorker");
+        workerThread.start();
+        workerHandler = new Handler(workerThread.getLooper());
+
         appSettings = new AppSettings(this);
         appSettings.setServiceRunning(true);
         checkInterval = appSettings.getCheckInterval();
@@ -68,12 +75,15 @@ public class BrightnessService extends Service {
 
         ShellExecutor shellExecutor = new ShellExecutor(this);
         appLog = new AppLog(this);
-        lightSensorManager = new LightSensorManager(this);
+        lightSensorManager = new LightSensorManager(this, workerHandler);
         brightnessController = new BrightnessController(this, shellExecutor);
         registerScreenReceiver();
-        if (isScreenOn()) {
-            startPeriodicCheck();
-        }
+
+        workerHandler.post(() -> {
+            if (isScreenOn()) {
+                startPeriodicCheck();
+            }
+        });
     }
 
     @Override
@@ -82,14 +92,14 @@ public class BrightnessService extends Service {
             stopSelf();
             return START_NOT_STICKY;
         }
-        if (intent != null && ACTION_UPDATE_INTERVAL.equals(intent.getAction())) {
-            updateInterval();
-            return START_STICKY;
-        }
-        if (isScreenOn()) {
-            detectOnce();
-            startPeriodicCheck();
-        }
+        workerHandler.post(() -> {
+            if (intent != null && ACTION_UPDATE_INTERVAL.equals(intent.getAction())) {
+                updateInterval();
+            } else if (isScreenOn()) {
+                detectOnce();
+                startPeriodicCheck();
+            }
+        });
         return START_STICKY;
     }
 
@@ -100,8 +110,8 @@ public class BrightnessService extends Service {
         } else if (isScreenOn()) {
             // Restart periodic check with new interval if screen is on
             periodicCheckRunning = true;
-            handler.removeCallbacks(periodicCheck);
-            handler.postDelayed(periodicCheck, checkInterval);
+            workerHandler.removeCallbacks(periodicCheck);
+            workerHandler.postDelayed(periodicCheck, checkInterval);
         }
     }
 
@@ -113,7 +123,9 @@ public class BrightnessService extends Service {
 
     @Override
     public void onDestroy() {
-        handler.removeCallbacksAndMessages(null);
+        if (workerHandler != null) {
+            workerHandler.removeCallbacksAndMessages(null);
+        }
         if (receiverRegistered) {
             unregisterReceiver(screenReceiver);
             receiverRegistered = false;
@@ -125,6 +137,9 @@ public class BrightnessService extends Service {
             appSettings.setServiceRunning(false);
         }
         sendStatusChanged(false);
+        if (workerThread != null) {
+            workerThread.quitSafely();
+        }
         super.onDestroy();
     }
 
@@ -141,9 +156,9 @@ public class BrightnessService extends Service {
         filter.addAction(Intent.ACTION_SCREEN_ON);
         filter.addAction(Intent.ACTION_SCREEN_OFF);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(screenReceiver, filter, RECEIVER_NOT_EXPORTED);
+            registerReceiver(screenReceiver, filter, null, workerHandler, RECEIVER_NOT_EXPORTED);
         } else {
-            registerReceiver(screenReceiver, filter);
+            registerReceiver(screenReceiver, filter, null, workerHandler);
         }
         receiverRegistered = true;
     }
@@ -165,13 +180,13 @@ public class BrightnessService extends Service {
             return;
         }
         periodicCheckRunning = true;
-        handler.removeCallbacks(periodicCheck);
-        handler.postDelayed(periodicCheck, checkInterval);
+        workerHandler.removeCallbacks(periodicCheck);
+        workerHandler.postDelayed(periodicCheck, checkInterval);
     }
 
     private void stopPeriodicCheck() {
         periodicCheckRunning = false;
-        handler.removeCallbacks(periodicCheck);
+        workerHandler.removeCallbacks(periodicCheck);
     }
 
     private void detectOnce() {

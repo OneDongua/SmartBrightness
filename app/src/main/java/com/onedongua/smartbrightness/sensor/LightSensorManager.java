@@ -13,12 +13,17 @@ public class LightSensorManager {
 
     private final SensorManager sensorManager;
     private final Sensor lightSensor;
-    private final Handler handler = new Handler(Looper.getMainLooper());
+    private final Handler handler;
     private OneShotLightListener currentListener;
 
     public LightSensorManager(Context context) {
+        this(context, new Handler(Looper.getMainLooper()));
+    }
+
+    public LightSensorManager(Context context, Handler handler) {
         sensorManager = (SensorManager) context.getSystemService(Context.SENSOR_SERVICE);
         lightSensor = sensorManager == null ? null : sensorManager.getDefaultSensor(Sensor.TYPE_LIGHT);
+        this.handler = handler;
     }
 
     public void detectOnce(Callback callback) {
@@ -68,11 +73,11 @@ public class LightSensorManager {
             this.callback = callback;
             this.timeout = () -> {
                 if (!completed) {
-                completed = true;
-                release(this);
-                callback.onUnavailable("timeout");
-            }
-        };
+                    completed = true;
+                    release(this);
+                    callback.onUnavailable("timeout");
+                }
+            };
         }
 
         @Override
